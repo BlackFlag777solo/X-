@@ -11,121 +11,160 @@ import {
   Dimensions,
   Platform,
   KeyboardAvoidingView,
-  Clipboard,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import Svg, { Circle, Line, Text as SvgText, G, Path } from 'react-native-svg';
 import axios from 'axios';
 
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-// Matrix rain effect component
-const MatrixRain = () => {
-  const columns = Math.floor(width / 20);
-  const [drops, setDrops] = useState<number[]>(Array(columns).fill(1));
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye';
+type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDrops((prev) =>
-        prev.map((y, i) => (Math.random() > 0.975 ? 0 : y + 1))
-      );
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
+// World Map Component
+const WorldMap = ({ markers = [], onRegionPress }: { markers: any[], onRegionPress?: (region: any) => void }) => {
+  const mapWidth = width - 32;
+  const mapHeight = 200;
+  
+  // Simplified world map projection
+  const latLonToXY = (lat: number, lon: number) => {
+    const x = ((lon + 180) / 360) * mapWidth;
+    const y = ((90 - lat) / 180) * mapHeight;
+    return { x, y };
+  };
+
+  // Continent outlines (simplified)
+  const continents = [
+    // North America
+    "M50,60 L120,40 L140,60 L130,90 L90,100 L60,90 Z",
+    // South America
+    "M80,110 L100,100 L110,130 L100,170 L80,160 L70,130 Z",
+    // Europe
+    "M160,50 L190,40 L200,60 L180,80 L160,70 Z",
+    // Africa
+    "M160,80 L200,80 L210,130 L180,160 L150,130 L150,100 Z",
+    // Asia
+    "M200,30 L280,20 L300,60 L280,90 L240,100 L200,80 L190,50 Z",
+    // Oceania
+    "M260,130 L300,120 L310,150 L280,160 L260,150 Z",
+  ];
 
   return (
-    <View style={styles.matrixContainer}>
-      {drops.map((y, i) => (
-        <Text
-          key={i}
-          style={[
-            styles.matrixChar,
-            { left: i * 20, top: (y * 20) % height, opacity: Math.random() * 0.5 + 0.3 },
-          ]}
-        >
-          {String.fromCharCode(0x30a0 + Math.random() * 96)}
-        </Text>
-      ))}
+    <View style={styles.mapContainer}>
+      <Svg width={mapWidth} height={mapHeight} viewBox={`0 0 ${mapWidth} ${mapHeight}`}>
+        {/* Grid lines */}
+        {[0, 1, 2, 3, 4].map((i) => (
+          <Line key={`h${i}`} x1={0} y1={i * 50} x2={mapWidth} y2={i * 50} stroke="#1a3a2a" strokeWidth={0.5} />
+        ))}
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          <Line key={`v${i}`} x1={i * 60} y1={0} x2={i * 60} y2={mapHeight} stroke="#1a3a2a" strokeWidth={0.5} />
+        ))}
+        
+        {/* Continents */}
+        {continents.map((d, i) => (
+          <Path key={i} d={d} fill="#0d2818" stroke="#00ff88" strokeWidth={1} opacity={0.6} />
+        ))}
+        
+        {/* Markers */}
+        {markers.map((marker, i) => {
+          const { x, y } = latLonToXY(marker.lat, marker.lon);
+          return (
+            <G key={i}>
+              <Circle cx={x} cy={y} r={8} fill="#ff000040" />
+              <Circle cx={x} cy={y} r={4} fill="#ff0000" />
+              <SvgText x={x} y={y - 12} fill="#ff0000" fontSize={8} textAnchor="middle">
+                {marker.count || marker.label}
+              </SvgText>
+            </G>
+          );
+        })}
+      </Svg>
     </View>
   );
 };
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense';
-type IntelSubTab = 'cve' | 'tech' | 'ddos';
-type DefenseSubTab = 'ip' | 'firewall' | 'threats' | 'abuse';
+// Animated Eye Component
+const AnimatedEye = () => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.timing(rotateAnim, { toValue: 1, duration: 10000, useNativeDriver: true })
+    ).start();
+  }, []);
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.eyeContainer}>
+      <Animated.View style={[styles.eyeOuter, { transform: [{ scale: pulseAnim }] }]}>
+        <View style={styles.eyeInner}>
+          <Animated.View style={[styles.eyePupil, { transform: [{ rotate }] }]}>
+            <View style={styles.eyeHighlight} />
+          </Animated.View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [intelSubTab, setIntelSubTab] = useState<IntelSubTab>('cve');
-  const [defenseSubTab, setDefenseSubTab] = useState<DefenseSubTab>('ip');
+  const [eyeSubTab, setEyeSubTab] = useState<EyeSubTab>('search');
   const [loading, setLoading] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
 
-  // OSINT State
+  // Basic states
   const [osintUsername, setOsintUsername] = useState('');
   const [osintResults, setOsintResults] = useState<any[]>([]);
-
-  // Password State
   const [password, setPassword] = useState('');
   const [passwordResult, setPasswordResult] = useState<any>(null);
-
-  // Website State
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [websiteResult, setWebsiteResult] = useState<any>(null);
-
-  // Chat State
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
   const [sessionId] = useState(`session_${Date.now()}`);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Intel State
-  const [cveId, setCveId] = useState('');
-  const [cveResult, setCveResult] = useState<any>(null);
-  const [techUrl, setTechUrl] = useState('');
-  const [techResult, setTechResult] = useState<any>(null);
-  const [ddosUrl, setDdosUrl] = useState('');
-  const [ddosResult, setDdosResult] = useState<any>(null);
+  // Eye states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchType, setSearchType] = useState('all');
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [globalStats, setGlobalStats] = useState<any>(null);
+  const [cameraData, setCameraData] = useState<any>(null);
+  const [breachEmail, setBreachEmail] = useState('');
+  const [breachResult, setBreachResult] = useState<any>(null);
+  const [domainQuery, setDomainQuery] = useState('');
+  const [domainResult, setDomainResult] = useState<any>(null);
 
-  // Defense State
-  const [ipToCheck, setIpToCheck] = useState('');
-  const [ipResult, setIpResult] = useState<any>(null);
-  const [firewallIps, setFirewallIps] = useState('');
-  const [firewallType, setFirewallType] = useState('iptables');
-  const [firewallResult, setFirewallResult] = useState<any>(null);
-  const [threatFeed, setThreatFeed] = useState<any>(null);
-  const [abuseIp, setAbuseIp] = useState('');
-  const [abuseType, setAbuseType] = useState('');
-  const [abuseEvidence, setAbuseEvidence] = useState('');
-  const [abuseResult, setAbuseResult] = useState<any>(null);
-
+  // Load global stats on Eye tab
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 1500,
-      useNativeDriver: true,
-    }).start();
+    if (activeTab === 'eye') {
+      loadGlobalStats();
+      loadCameraData();
+    }
+  }, [activeTab]);
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: false }),
-      ])
-    ).start();
-  }, []);
-
-  // API Calls - Original
+  // API functions
   const scanOSINT = async () => {
     if (!osintUsername.trim()) return;
     setLoading(true);
     try {
       const response = await axios.post(`${API_URL}/api/osint/scan`, { username: osintUsername });
       setOsintResults(response.data);
-    } catch (error) {
-      console.error('OSINT Error:', error);
-    }
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
@@ -133,11 +172,9 @@ export default function App() {
     if (!password.trim()) return;
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/api/password/check`, { password: password });
+      const response = await axios.post(`${API_URL}/api/password/check`, { password });
       setPasswordResult(response.data);
-    } catch (error) {
-      console.error('Password Error:', error);
-    }
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
@@ -147,548 +184,407 @@ export default function App() {
     try {
       const response = await axios.post(`${API_URL}/api/website/analyze`, { url: websiteUrl });
       setWebsiteResult(response.data);
-    } catch (error) {
-      console.error('Website Error:', error);
-    }
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
   const sendChat = async () => {
     if (!chatMessage.trim()) return;
-    const userMsg = chatMessage;
+    const msg = chatMessage;
     setChatMessage('');
-    setChatHistory((prev) => [...prev, { role: 'user', content: userMsg }]);
+    setChatHistory(prev => [...prev, { role: 'user', content: msg }]);
     setLoading(true);
-
     try {
-      const response = await axios.post(`${API_URL}/api/chat`, { session_id: sessionId, message: userMsg });
-      setChatHistory((prev) => [...prev, { role: 'assistant', content: response.data.response }]);
+      const response = await axios.post(`${API_URL}/api/chat`, { session_id: sessionId, message: msg });
+      setChatHistory(prev => [...prev, { role: 'assistant', content: response.data.response }]);
     } catch (error) {
-      setChatHistory((prev) => [...prev, { role: 'assistant', content: 'Error connecting to AI...' }]);
-    }
-    setLoading(false);
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-  };
-
-  // Intel API Calls
-  const searchCVE = async () => {
-    if (!cveId.trim()) return;
-    setLoading(true);
-    setCveResult(null);
-    try {
-      const response = await axios.post(`${API_URL}/api/intel/cve`, { cve_id: cveId });
-      setCveResult(response.data);
-    } catch (error: any) {
-      setCveResult({ error: error.response?.data?.detail || 'CVE not found' });
+      setChatHistory(prev => [...prev, { role: 'assistant', content: 'Error...' }]);
     }
     setLoading(false);
   };
 
-  const detectTech = async () => {
-    if (!techUrl.trim()) return;
-    setLoading(true);
-    setTechResult(null);
+  // Eye API functions
+  const loadGlobalStats = async () => {
     try {
-      const response = await axios.post(`${API_URL}/api/intel/techdetect`, { url: techUrl });
-      setTechResult(response.data);
-    } catch (error: any) {
-      setTechResult({ error: error.response?.data?.detail || 'Analysis failed' });
-    }
+      const response = await axios.get(`${API_URL}/api/eye/global-stats`);
+      setGlobalStats(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadCameraData = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/eye/public-cameras`);
+      setCameraData(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const deepSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setLoading(true);
+    setSearchResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/eye/deep-search`, { query: searchQuery, search_type: searchType });
+      setSearchResult(response.data);
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
-  const analyzeDDoS = async () => {
-    if (!ddosUrl.trim()) return;
+  const checkBreach = async () => {
+    if (!breachEmail.trim()) return;
     setLoading(true);
-    setDdosResult(null);
+    setBreachResult(null);
     try {
-      const response = await axios.post(`${API_URL}/api/intel/ddos-analysis`, { url: ddosUrl });
-      setDdosResult(response.data);
-    } catch (error: any) {
-      setDdosResult({ error: error.response?.data?.detail || 'Analysis failed' });
-    }
+      const response = await axios.post(`${API_URL}/api/eye/breach-check`, { email: breachEmail });
+      setBreachResult(response.data);
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
-  // Defense API Calls
-  const checkIPReputation = async () => {
-    if (!ipToCheck.trim()) return;
+  const getDomainIntel = async () => {
+    if (!domainQuery.trim()) return;
     setLoading(true);
-    setIpResult(null);
+    setDomainResult(null);
     try {
-      const response = await axios.post(`${API_URL}/api/defense/ip-reputation`, { ip: ipToCheck });
-      setIpResult(response.data);
-    } catch (error: any) {
-      setIpResult({ error: error.response?.data?.detail || 'Check failed' });
-    }
-    setLoading(false);
-  };
-
-  const generateFirewallRules = async () => {
-    if (!firewallIps.trim()) return;
-    setLoading(true);
-    setFirewallResult(null);
-    try {
-      const ips = firewallIps.split(',').map(ip => ip.trim()).filter(ip => ip);
-      const response = await axios.post(`${API_URL}/api/defense/firewall-rules`, { ips, rule_type: firewallType });
-      setFirewallResult(response.data);
-    } catch (error: any) {
-      setFirewallResult({ error: error.response?.data?.detail || 'Generation failed' });
-    }
-    setLoading(false);
-  };
-
-  const loadThreatFeed = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/defense/threat-feed`);
-      setThreatFeed(response.data);
-    } catch (error) {
-      console.error('Threat feed error:', error);
-    }
-    setLoading(false);
-  };
-
-  const generateAbuseReport = async () => {
-    if (!abuseIp.trim() || !abuseType.trim()) return;
-    setLoading(true);
-    setAbuseResult(null);
-    try {
-      const evidence = abuseEvidence.split('\n').filter(e => e.trim());
-      const response = await axios.post(`${API_URL}/api/defense/abuse-report`, {
-        attacker_ip: abuseIp,
-        attack_type: abuseType,
-        evidence: evidence.length > 0 ? evidence : ['Attack detected'],
-      });
-      setAbuseResult(response.data);
-    } catch (error: any) {
-      setAbuseResult({ error: error.response?.data?.detail || 'Report generation failed' });
-    }
+      const response = await axios.post(`${API_URL}/api/eye/domain-intel`, { domain: domainQuery });
+      setDomainResult(response.data);
+    } catch (error) { console.error(error); }
     setLoading(false);
   };
 
   const renderHome = () => (
-    <Animated.View style={[styles.homeContainer, { opacity: fadeAnim }]}>
-      <MatrixRain />
+    <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>X=pi</Text>
         <Text style={styles.subtitleText}>by Carbi</Text>
-        <Text style={styles.taglineText}>Cybersecurity Toolkit v3.0</Text>
+        <Text style={styles.taglineText}>Cybersecurity Toolkit v4.0</Text>
       </View>
 
-      <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.featuresGrid}>
-          <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('osint')}>
-            <MaterialCommunityIcons name="account-search" size={32} color="#00ff88" />
-            <Text style={styles.featureTitle}>OSINT</Text>
-            <Text style={styles.featureDesc}>Username Search</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('password')}>
-            <MaterialCommunityIcons name="shield-lock" size={32} color="#ff00ff" />
-            <Text style={styles.featureTitle}>Password</Text>
-            <Text style={styles.featureDesc}>Security Check</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('website')}>
-            <MaterialCommunityIcons name="web" size={32} color="#00ffff" />
-            <Text style={styles.featureTitle}>Website</Text>
-            <Text style={styles.featureDesc}>Header Analysis</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('chat')}>
-            <MaterialCommunityIcons name="robot" size={32} color="#ffff00" />
-            <Text style={styles.featureTitle}>AI Chat</Text>
-            <Text style={styles.featureDesc}>Security Expert</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={[styles.featureCardWide, { borderColor: '#ff6600' }]} onPress={() => setActiveTab('intel')}>
-          <MaterialCommunityIcons name="shield-bug" size={36} color="#ff6600" />
-          <View style={styles.wideCardText}>
-            <Text style={styles.featureTitle}>Security Intel</Text>
-            <Text style={styles.featureDesc}>CVE | Tech Detection | DDoS Analysis</Text>
-          </View>
+      <View style={styles.featuresGrid}>
+        <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('osint')}>
+          <MaterialCommunityIcons name="account-search" size={28} color="#00ff88" />
+          <Text style={styles.featureTitle}>OSINT</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.featureCardWide, { borderColor: '#00ff00' }]} onPress={() => setActiveTab('defense')}>
-          <MaterialCommunityIcons name="shield-check" size={36} color="#00ff00" />
-          <View style={styles.wideCardText}>
-            <Text style={styles.featureTitle}>Defense Center</Text>
-            <Text style={styles.featureDesc}>IP Rep | Firewall | Threats | Reports</Text>
-          </View>
+        <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('password')}>
+          <MaterialCommunityIcons name="shield-lock" size={28} color="#ff00ff" />
+          <Text style={styles.featureTitle}>Password</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('website')}>
+          <MaterialCommunityIcons name="web" size={28} color="#00ffff" />
+          <Text style={styles.featureTitle}>Website</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('chat')}>
+          <MaterialCommunityIcons name="robot" size={28} color="#ffff00" />
+          <Text style={styles.featureTitle}>AI Chat</Text>
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.footerInline}>
-          <Text style={styles.footerText}>100% Legal & Ethical Security Tools</Text>
-          <Text style={styles.versionText}>v3.0.0 - Defense Center Added</Text>
+      <TouchableOpacity style={[styles.featureCardWide, { borderColor: '#ff6600' }]} onPress={() => setActiveTab('intel')}>
+        <MaterialCommunityIcons name="shield-bug" size={32} color="#ff6600" />
+        <View style={styles.wideCardText}>
+          <Text style={styles.featureTitle}>Security Intel</Text>
+          <Text style={styles.featureDesc}>CVE | Tech | DDoS Analysis</Text>
         </View>
-      </ScrollView>
-    </Animated.View>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.featureCardWide, { borderColor: '#00ff00' }]} onPress={() => setActiveTab('defense')}>
+        <MaterialCommunityIcons name="shield-check" size={32} color="#00ff00" />
+        <View style={styles.wideCardText}>
+          <Text style={styles.featureTitle}>Defense Center</Text>
+          <Text style={styles.featureDesc}>IP Rep | Firewall | Threats</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* EL OJO DEL DIABLO - Featured Module */}
+      <TouchableOpacity style={styles.eyeCard} onPress={() => setActiveTab('eye')}>
+        <View style={styles.eyeCardContent}>
+          <View style={styles.eyeIconSmall}>
+            <MaterialCommunityIcons name="eye" size={40} color="#ff0000" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={styles.eyeCardTitle}>EL OJO DEL DIABLO</Text>
+            <Text style={styles.eyeCardSubtitle}>Deep Search | Global Map | Breach Intel</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={styles.eyeCardStat}>195 Regions</Text>
+          <Text style={styles.eyeCardStat}>55K+ Cameras</Text>
+          <Text style={styles.eyeCardStat}>8.5M+ Breaches</Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.footerInline}>
+        <Text style={styles.footerText}>X=pi by Carbi - v4.0</Text>
+      </View>
+    </ScrollView>
   );
 
-  const renderOSINT = () => (
+  const renderEye = () => (
     <View style={styles.tabContent}>
-      <View style={styles.header}>
+      <View style={styles.eyeHeader}>
         <TouchableOpacity onPress={() => setActiveTab('home')}>
-          <Ionicons name="arrow-back" size={28} color="#00ff88" />
+          <Ionicons name="arrow-back" size={28} color="#ff0000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>OSINT Scanner</Text>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="eye" size={24} color="#ff0000" />
+          <Text style={styles.eyeTitle}>EL OJO DEL DIABLO</Text>
+        </View>
         <View style={{ width: 28 }} />
       </View>
 
-      <View style={styles.inputContainer}>
-        <MaterialCommunityIcons name="account-search" size={24} color="#00ff88" />
-        <TextInput style={styles.input} placeholder="Enter username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} autoCapitalize="none" />
-      </View>
-
-      <TouchableOpacity style={[styles.scanButton, loading && styles.buttonDisabled]} onPress={scanOSINT} disabled={loading}>
-        {loading ? <ActivityIndicator color="#000" /> : <><FontAwesome5 name="search" size={16} color="#000" /><Text style={styles.scanButtonText}>SCAN</Text></>}
-      </TouchableOpacity>
-
-      <ScrollView style={styles.resultsContainer}>
-        {osintResults.map((result, index) => (
-          <View key={index} style={styles.resultCard}>
-            <View style={styles.resultHeader}>
-              <Text style={styles.platformName}>{result.platform}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: result.exists ? '#00ff88' : '#ff4444' }]}>
-                <Text style={styles.statusText}>{result.exists ? 'FOUND' : 'NOT FOUND'}</Text>
-              </View>
-            </View>
-            <Text style={styles.resultUrl} numberOfLines={1}>{result.url}</Text>
+      {/* Global Stats Bar */}
+      {globalStats && (
+        <View style={styles.statsBar}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{globalStats.regions_covered}</Text>
+            <Text style={styles.statLabel}>Regions</Text>
           </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const renderPassword = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color="#ff00ff" /></TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ff00ff' }]}>Password Checker</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <View style={[styles.inputContainer, { borderColor: '#ff00ff' }]}>
-        <MaterialCommunityIcons name="lock" size={24} color="#ff00ff" />
-        <TextInput style={styles.input} placeholder="Enter password..." placeholderTextColor="#666" value={password} onChangeText={setPassword} secureTextEntry />
-      </View>
-
-      <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff00ff' }, loading && styles.buttonDisabled]} onPress={checkPassword} disabled={loading}>
-        {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="shield-check" size={16} color="#000" /><Text style={styles.scanButtonText}>CHECK</Text></>}
-      </TouchableOpacity>
-
-      {passwordResult && (
-        <ScrollView style={styles.resultsContainer}>
-          <View style={[styles.resultCard, { borderColor: '#ff00ff' }]}>
-            <Text style={styles.resultLabel}>Strength</Text>
-            <Text style={[styles.strengthText, { color: passwordResult.strength === 'Strong' ? '#00ff88' : passwordResult.strength === 'Medium' ? '#ffff00' : '#ff4444' }]}>{passwordResult.strength}</Text>
-            <Text style={styles.resultLabel}>Data Breaches</Text>
-            <View style={styles.breachContainer}>
-              {passwordResult.is_pwned ? (
-                <><MaterialCommunityIcons name="alert-circle" size={24} color="#ff4444" /><Text style={styles.breachText}>Found in {passwordResult.breach_count.toLocaleString()} breaches!</Text></>
-              ) : (
-                <><MaterialCommunityIcons name="check-circle" size={24} color="#00ff88" /><Text style={[styles.breachText, { color: '#00ff88' }]}>Not found in breaches</Text></>
-              )}
-            </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{(globalStats.total_breaches_found / 1000000).toFixed(1)}M</Text>
+            <Text style={styles.statLabel}>Breaches</Text>
           </View>
-        </ScrollView>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{globalStats.active_threats}</Text>
+            <Text style={styles.statLabel}>Threats</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{(cameraData?.total_cameras / 1000).toFixed(1)}K</Text>
+            <Text style={styles.statLabel}>Cameras</Text>
+          </View>
+        </View>
       )}
-    </View>
-  );
 
-  const renderWebsite = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color="#00ffff" /></TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#00ffff' }]}>Website Analyzer</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <View style={[styles.inputContainer, { borderColor: '#00ffff' }]}>
-        <MaterialCommunityIcons name="web" size={24} color="#00ffff" />
-        <TextInput style={styles.input} placeholder="Enter website URL..." placeholderTextColor="#666" value={websiteUrl} onChangeText={setWebsiteUrl} autoCapitalize="none" />
-      </View>
-
-      <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ffff' }, loading && styles.buttonDisabled]} onPress={analyzeWebsite} disabled={loading}>
-        {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="radar" size={16} color="#000" /><Text style={styles.scanButtonText}>ANALYZE</Text></>}
-      </TouchableOpacity>
-
-      {websiteResult && (
-        <ScrollView style={styles.resultsContainer}>
-          <View style={[styles.resultCard, { borderColor: '#00ffff' }]}>
-            <Text style={styles.resultLabel}>Security Score</Text>
-            <Text style={styles.scoreText}>{websiteResult.overall_score}</Text>
-            <Text style={styles.resultLabel}>Headers</Text>
-            {websiteResult.headers.map((h: any, i: number) => (
-              <View key={i} style={styles.headerRow}>
-                <MaterialCommunityIcons name={h.present ? 'check-circle' : 'close-circle'} size={18} color={h.present ? '#00ff88' : '#ff4444'} />
-                <Text style={styles.headerName}>{h.header}</Text>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      )}
-    </View>
-  );
-
-  const renderChat = () => (
-    <KeyboardAvoidingView style={styles.tabContent} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color="#ffff00" /></TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ffff00' }]}>AI Security Chat</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <ScrollView ref={scrollViewRef} style={styles.chatContainer}>
-        {chatHistory.length === 0 && (
-          <View style={styles.welcomeChat}>
-            <MaterialCommunityIcons name="robot" size={50} color="#ffff00" />
-            <Text style={styles.welcomeText}>X=pi AI Assistant</Text>
-            <Text style={styles.welcomeSubtext}>Ask about cybersecurity</Text>
-          </View>
-        )}
-        {chatHistory.map((msg, i) => (
-          <View key={i} style={[styles.chatBubble, msg.role === 'user' ? styles.userBubble : styles.assistantBubble]}>
-            <Text style={styles.chatText}>{msg.content}</Text>
-          </View>
-        ))}
-        {loading && <View style={[styles.chatBubble, styles.assistantBubble]}><ActivityIndicator color="#ffff00" size="small" /></View>}
-      </ScrollView>
-
-      <View style={styles.chatInputContainer}>
-        <TextInput style={styles.chatInput} placeholder="Ask..." placeholderTextColor="#666" value={chatMessage} onChangeText={setChatMessage} multiline />
-        <TouchableOpacity style={[styles.sendButton, loading && styles.buttonDisabled]} onPress={sendChat} disabled={loading}>
-          <Ionicons name="send" size={22} color="#000" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
-  );
-
-  const renderIntel = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color="#ff6600" /></TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ff6600' }]}>Security Intel</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <View style={styles.subTabContainer}>
-        {(['cve', 'tech', 'ddos'] as IntelSubTab[]).map((tab) => (
-          <TouchableOpacity key={tab} style={[styles.subTab, intelSubTab === tab && { backgroundColor: '#ff6600' }]} onPress={() => setIntelSubTab(tab)}>
-            <Text style={[styles.subTabText, intelSubTab === tab && { color: '#000' }]}>{tab.toUpperCase()}</Text>
+      {/* Sub tabs */}
+      <View style={styles.eyeSubTabs}>
+        {(['search', 'map', 'breach', 'domain'] as EyeSubTab[]).map((tab) => (
+          <TouchableOpacity key={tab} style={[styles.eyeSubTab, eyeSubTab === tab && styles.eyeSubTabActive]} onPress={() => setEyeSubTab(tab)}>
+            <MaterialCommunityIcons 
+              name={tab === 'search' ? 'magnify' : tab === 'map' ? 'earth' : tab === 'breach' ? 'database-alert' : 'domain'} 
+              size={18} 
+              color={eyeSubTab === tab ? '#000' : '#ff0000'} 
+            />
+            <Text style={[styles.eyeSubTabText, eyeSubTab === tab && styles.eyeSubTabTextActive]}>
+              {tab.toUpperCase()}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <ScrollView style={styles.resultsContainer}>
-        {intelSubTab === 'cve' && (
+        {/* DEEP SEARCH */}
+        {eyeSubTab === 'search' && (
           <>
-            <View style={[styles.inputContainer, { borderColor: '#ff6600' }]}>
-              <MaterialCommunityIcons name="bug" size={24} color="#ff6600" />
-              <TextInput style={styles.input} placeholder="CVE-2021-44228" placeholderTextColor="#666" value={cveId} onChangeText={setCveId} autoCapitalize="characters" />
-            </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff6600' }, loading && styles.buttonDisabled]} onPress={searchCVE} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>SEARCH CVE</Text>}
-            </TouchableOpacity>
-            {cveResult && !cveResult.error && (
-              <View style={[styles.resultCard, { borderColor: '#ff6600' }]}>
-                <View style={styles.cveHeader}>
-                  <Text style={styles.cveId}>{cveResult.cve_id}</Text>
-                  <View style={[styles.severityBadge, { backgroundColor: cveResult.severity === 'CRITICAL' ? '#ff0000' : cveResult.severity === 'HIGH' ? '#ff6600' : '#ffff00' }]}>
-                    <Text style={styles.severityText}>{cveResult.severity}</Text>
-                  </View>
-                </View>
-                {cveResult.cvss_score && <Text style={styles.cvssScore}>CVSS: {cveResult.cvss_score}</Text>}
-                <Text style={styles.cveDescription}>{cveResult.description}</Text>
-              </View>
-            )}
-          </>
-        )}
-
-        {intelSubTab === 'tech' && (
-          <>
-            <View style={[styles.inputContainer, { borderColor: '#ff6600' }]}>
-              <MaterialCommunityIcons name="web" size={24} color="#ff6600" />
-              <TextInput style={styles.input} placeholder="https://example.com" placeholderTextColor="#666" value={techUrl} onChangeText={setTechUrl} autoCapitalize="none" />
-            </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff6600' }, loading && styles.buttonDisabled]} onPress={detectTech} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>DETECT TECH</Text>}
-            </TouchableOpacity>
-            {techResult && !techResult.error && (
-              <View style={[styles.resultCard, { borderColor: '#ff6600' }]}>
-                {techResult.server && <Text style={styles.techItem}>Server: {techResult.server}</Text>}
-                {techResult.framework && <Text style={styles.techItem}>Framework: {techResult.framework}</Text>}
-                {techResult.technologies.map((t: any, i: number) => (
-                  <View key={i} style={styles.techRow}><Text style={styles.techName}>{t.name}</Text><Text style={[styles.techConf, { color: t.confidence === 'high' ? '#00ff88' : '#ffff00' }]}>{t.confidence}</Text></View>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-
-        {intelSubTab === 'ddos' && (
-          <>
-            <View style={[styles.inputContainer, { borderColor: '#ff6600' }]}>
-              <MaterialCommunityIcons name="shield-alert" size={24} color="#ff6600" />
-              <TextInput style={styles.input} placeholder="https://your-site.com" placeholderTextColor="#666" value={ddosUrl} onChangeText={setDdosUrl} autoCapitalize="none" />
-            </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff6600' }, loading && styles.buttonDisabled]} onPress={analyzeDDoS} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>ANALYZE</Text>}
-            </TouchableOpacity>
-            {ddosResult && !ddosResult.error && (
-              <View style={[styles.resultCard, { borderColor: '#ff6600' }]}>
-                <View style={styles.ddosHeader}>
-                  <Text style={styles.resultLabel}>Risk Level</Text>
-                  <View style={[styles.riskBadge, { backgroundColor: ddosResult.overall_risk === 'CRITICAL' ? '#ff0000' : ddosResult.overall_risk === 'HIGH' ? '#ff6600' : '#00ff88' }]}>
-                    <Text style={styles.riskText}>{ddosResult.overall_risk}</Text>
-                  </View>
-                </View>
-                {ddosResult.cdn_detected && <Text style={styles.cdnText}>Protected: {ddosResult.cdn_detected}</Text>}
-                {ddosResult.vulnerabilities.map((v: any, i: number) => (
-                  <View key={i} style={styles.vulnItem}><Text style={styles.vulnType}>{v.type}</Text><Text style={styles.vulnMit}>{v.mitigation}</Text></View>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
-    </View>
-  );
-
-  const renderDefense = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color="#00ff00" /></TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#00ff00' }]}>Defense Center</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <View style={styles.subTabContainer}>
-        {(['ip', 'firewall', 'threats', 'abuse'] as DefenseSubTab[]).map((tab) => (
-          <TouchableOpacity key={tab} style={[styles.subTab, defenseSubTab === tab && { backgroundColor: '#00ff00' }]} onPress={() => { setDefenseSubTab(tab); if (tab === 'threats') loadThreatFeed(); }}>
-            <Text style={[styles.subTabText, defenseSubTab === tab && { color: '#000' }]}>{tab === 'ip' ? 'IP' : tab === 'firewall' ? 'FW' : tab === 'threats' ? 'TI' : 'RPT'}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ScrollView style={styles.resultsContainer}>
-        {defenseSubTab === 'ip' && (
-          <>
-            <View style={[styles.inputContainer, { borderColor: '#00ff00' }]}>
-              <MaterialCommunityIcons name="ip-network" size={24} color="#00ff00" />
-              <TextInput style={styles.input} placeholder="Enter IP address..." placeholderTextColor="#666" value={ipToCheck} onChangeText={setIpToCheck} keyboardType="numeric" />
-            </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ff00' }, loading && styles.buttonDisabled]} onPress={checkIPReputation} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>CHECK REPUTATION</Text>}
-            </TouchableOpacity>
-            {ipResult && !ipResult.error && (
-              <View style={[styles.resultCard, { borderColor: ipResult.is_malicious ? '#ff0000' : '#00ff00' }]}>
-                <View style={styles.ipHeader}>
-                  <Text style={styles.ipAddress}>{ipResult.ip}</Text>
-                  <View style={[styles.maliciousBadge, { backgroundColor: ipResult.is_malicious ? '#ff0000' : '#00ff00' }]}>
-                    <Text style={styles.maliciousText}>{ipResult.is_malicious ? 'MALICIOUS' : 'SAFE'}</Text>
-                  </View>
-                </View>
-                <Text style={styles.abuseScore}>Abuse Score: {ipResult.abuse_score}/100</Text>
-                {ipResult.country && <Text style={styles.ipInfo}>Country: {ipResult.country}</Text>}
-                {ipResult.isp && <Text style={styles.ipInfo}>ISP: {ipResult.isp}</Text>}
-                {ipResult.threat_types.length > 0 && (
-                  <View style={styles.threatTypes}>
-                    <Text style={styles.resultLabel}>Threats:</Text>
-                    {ipResult.threat_types.map((t: string, i: number) => <Text key={i} style={styles.threatType}>- {t}</Text>)}
-                  </View>
-                )}
-                <Text style={[styles.resultLabel, { marginTop: 10 }]}>Recommendations:</Text>
-                {ipResult.recommendations.slice(0, 3).map((r: string, i: number) => <Text key={i} style={styles.recommendation}>- {r}</Text>)}
-              </View>
-            )}
-          </>
-        )}
-
-        {defenseSubTab === 'firewall' && (
-          <>
-            <View style={[styles.inputContainer, { borderColor: '#00ff00' }]}>
-              <MaterialCommunityIcons name="wall-fire" size={24} color="#00ff00" />
-              <TextInput style={styles.input} placeholder="IPs (comma separated)" placeholderTextColor="#666" value={firewallIps} onChangeText={setFirewallIps} />
-            </View>
-            <View style={styles.fwTypeContainer}>
-              {['iptables', 'ufw', 'windows', 'pf'].map((type) => (
-                <TouchableOpacity key={type} style={[styles.fwTypeBtn, firewallType === type && styles.fwTypeBtnActive]} onPress={() => setFirewallType(type)}>
-                  <Text style={[styles.fwTypeText, firewallType === type && styles.fwTypeTextActive]}>{type}</Text>
+            <View style={styles.searchTypeRow}>
+              {['all', 'email', 'username', 'domain', 'ip', 'phone'].map((type) => (
+                <TouchableOpacity key={type} style={[styles.searchTypeBtn, searchType === type && styles.searchTypeBtnActive]} onPress={() => setSearchType(type)}>
+                  <Text style={[styles.searchTypeText, searchType === type && styles.searchTypeTextActive]}>{type}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ff00' }, loading && styles.buttonDisabled]} onPress={generateFirewallRules} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>GENERATE RULES</Text>}
-            </TouchableOpacity>
-            {firewallResult && !firewallResult.error && (
-              <View style={[styles.resultCard, { borderColor: '#00ff00' }]}>
-                <Text style={styles.resultLabel}>Generated {firewallResult.rules.length} rules for {firewallResult.total_ips} IPs</Text>
-                {firewallResult.rules.map((r: any, i: number) => (
-                  <View key={i} style={styles.ruleItem}>
-                    <Text style={styles.ruleCode}>{r.rule}</Text>
-                    <Text style={styles.ruleDesc}>{r.description}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </>
-        )}
 
-        {defenseSubTab === 'threats' && (
-          <>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ff00' }, loading && styles.buttonDisabled]} onPress={loadThreatFeed} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>LOAD THREAT FEED</Text>}
+            <View style={styles.eyeInputContainer}>
+              <MaterialCommunityIcons name="magnify" size={24} color="#ff0000" />
+              <TextInput style={styles.eyeInput} placeholder="Enter search query..." placeholderTextColor="#666" value={searchQuery} onChangeText={setSearchQuery} autoCapitalize="none" />
+            </View>
+
+            <TouchableOpacity style={[styles.eyeButton, loading && styles.buttonDisabled]} onPress={deepSearch} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="eye-outline" size={20} color="#000" /><Text style={styles.eyeButtonText}>DEEP SEARCH</Text></>}
             </TouchableOpacity>
-            {threatFeed && (
-              <View style={[styles.resultCard, { borderColor: '#00ff00' }]}>
-                <Text style={styles.resultLabel}>Active Threats: {threatFeed.total_threats}</Text>
-                {threatFeed.threats.map((t: any, i: number) => (
-                  <View key={i} style={styles.threatItem}>
-                    <View style={styles.threatHeader}>
-                      <Text style={styles.threatName}>{t.name}</Text>
-                      <View style={[styles.threatSeverity, { backgroundColor: t.severity === 'CRITICAL' ? '#ff0000' : t.severity === 'HIGH' ? '#ff6600' : '#ffff00' }]}>
-                        <Text style={styles.threatSeverityText}>{t.severity}</Text>
+
+            {searchResult && (
+              <View style={styles.eyeResultCard}>
+                <View style={styles.resultHeader}>
+                  <Text style={styles.resultTitle}>Results: {searchResult.total_results}</Text>
+                  <Text style={styles.resultSources}>{searchResult.sources_searched} sources</Text>
+                </View>
+
+                {searchResult.results.map((result: any, i: number) => (
+                  <View key={i} style={styles.resultItem}>
+                    <View style={styles.resultItemHeader}>
+                      <Text style={styles.resultSource}>{result.source}</Text>
+                      <View style={[styles.confidenceBadge, { backgroundColor: result.confidence === 'high' ? '#00ff88' : result.confidence === 'medium' ? '#ffff00' : '#666' }]}>
+                        <Text style={styles.confidenceText}>{result.confidence}</Text>
                       </View>
                     </View>
-                    <Text style={styles.threatDesc}>{t.description}</Text>
-                    <Text style={styles.threatIndicators}>Indicators: {t.indicators.join(', ')}</Text>
+                    <Text style={styles.resultType}>{result.type}</Text>
+                    {result.data && (
+                      <View style={styles.resultData}>
+                        {Object.entries(result.data).slice(0, 5).map(([key, value]: [string, any]) => (
+                          <Text key={key} style={styles.resultDataItem}>{key}: {typeof value === 'object' ? JSON.stringify(value).slice(0, 50) : String(value)}</Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 ))}
+
+                {searchResult.geo_data.length > 0 && (
+                  <>
+                    <Text style={styles.sectionTitle}>Location Data</Text>
+                    <WorldMap markers={searchResult.geo_data} />
+                  </>
+                )}
               </View>
             )}
           </>
         )}
 
-        {defenseSubTab === 'abuse' && (
+        {/* GLOBAL MAP */}
+        {eyeSubTab === 'map' && (
           <>
-            <View style={[styles.inputContainer, { borderColor: '#00ff00' }]}>
-              <MaterialCommunityIcons name="ip-network" size={24} color="#00ff00" />
-              <TextInput style={styles.input} placeholder="Attacker IP" placeholderTextColor="#666" value={abuseIp} onChangeText={setAbuseIp} />
+            <Text style={styles.sectionTitle}>Global Camera Network</Text>
+            <Text style={styles.sectionSubtitle}>Public webcams from EarthCam, Webcams.travel & WorldCam</Text>
+            
+            {cameraData && (
+              <>
+                <WorldMap markers={cameraData.cameras.map((c: any) => ({ lat: c.lat, lon: c.lon, count: c.count, label: c.region }))} />
+                
+                <View style={styles.regionList}>
+                  {cameraData.cameras.map((camera: any, i: number) => (
+                    <View key={i} style={styles.regionCard}>
+                      <View style={styles.regionHeader}>
+                        <Text style={styles.regionName}>{camera.region}</Text>
+                        <Text style={styles.regionCount}>{camera.count.toLocaleString()}</Text>
+                      </View>
+                      <View style={styles.regionTypes}>
+                        {camera.types.map((type: string, j: number) => (
+                          <View key={j} style={styles.typeTag}>
+                            <Text style={styles.typeText}>{type}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.totalCameras}>
+                  <MaterialCommunityIcons name="camera" size={24} color="#ff0000" />
+                  <Text style={styles.totalText}>{cameraData.total_cameras.toLocaleString()} Public Cameras Indexed</Text>
+                </View>
+              </>
+            )}
+          </>
+        )}
+
+        {/* BREACH CHECK */}
+        {eyeSubTab === 'breach' && (
+          <>
+            <View style={styles.eyeInputContainer}>
+              <MaterialCommunityIcons name="email-alert" size={24} color="#ff0000" />
+              <TextInput style={styles.eyeInput} placeholder="Enter email to check..." placeholderTextColor="#666" value={breachEmail} onChangeText={setBreachEmail} autoCapitalize="none" keyboardType="email-address" />
             </View>
-            <View style={[styles.inputContainer, { borderColor: '#00ff00' }]}>
-              <MaterialCommunityIcons name="alert" size={24} color="#00ff00" />
-              <TextInput style={styles.input} placeholder="Attack type (e.g., DDoS, Brute Force)" placeholderTextColor="#666" value={abuseType} onChangeText={setAbuseType} />
-            </View>
-            <View style={[styles.inputContainer, { borderColor: '#00ff00', minHeight: 80 }]}>
-              <TextInput style={[styles.input, { textAlignVertical: 'top' }]} placeholder="Evidence (one per line)" placeholderTextColor="#666" value={abuseEvidence} onChangeText={setAbuseEvidence} multiline numberOfLines={3} />
-            </View>
-            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ff00' }, loading && styles.buttonDisabled]} onPress={generateAbuseReport} disabled={loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>GENERATE REPORT</Text>}
+
+            <TouchableOpacity style={[styles.eyeButton, loading && styles.buttonDisabled]} onPress={checkBreach} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="database-search" size={20} color="#000" /><Text style={styles.eyeButtonText}>CHECK BREACHES</Text></>}
             </TouchableOpacity>
-            {abuseResult && !abuseResult.error && (
-              <View style={[styles.resultCard, { borderColor: '#00ff00' }]}>
-                <Text style={styles.resultLabel}>Report Generated</Text>
-                <Text style={styles.abuseEmail}>CERT: {abuseResult.cert_email}</Text>
-                {abuseResult.isp_email && <Text style={styles.abuseEmail}>ISP: {abuseResult.isp_email}</Text>}
-                <Text style={styles.abuseReport}>{abuseResult.report_text}</Text>
+
+            {breachResult && (
+              <View style={styles.eyeResultCard}>
+                <View style={styles.breachHeader}>
+                  <MaterialCommunityIcons name={breachResult.is_breached ? "alert-circle" : "check-circle"} size={40} color={breachResult.is_breached ? "#ff0000" : "#00ff88"} />
+                  <View style={styles.breachInfo}>
+                    <Text style={[styles.breachStatus, { color: breachResult.is_breached ? '#ff0000' : '#00ff88' }]}>
+                      {breachResult.is_breached ? 'BREACHED' : 'NO BREACHES FOUND'}
+                    </Text>
+                    <Text style={styles.breachEmail}>{breachResult.email}</Text>
+                  </View>
+                </View>
+
+                {breachResult.is_breached && (
+                  <>
+                    <Text style={styles.breachCount}>Found in {breachResult.breach_count} breach(es)</Text>
+                    
+                    <Text style={styles.sectionTitle}>Exposed Data Types</Text>
+                    <View style={styles.exposedData}>
+                      {breachResult.exposed_data.map((data: string, i: number) => (
+                        <View key={i} style={styles.exposedTag}>
+                          <Text style={styles.exposedText}>{data}</Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <Text style={styles.sectionTitle}>Breach Details</Text>
+                    {breachResult.breaches.map((breach: any, i: number) => (
+                      <View key={i} style={styles.breachCard}>
+                        <Text style={styles.breachName}>{breach.name}</Text>
+                        <Text style={styles.breachDate}>{breach.date}</Text>
+                        <Text style={styles.breachRecords}>{breach.records_affected.toLocaleString()} records</Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        )}
+
+        {/* DOMAIN INTEL */}
+        {eyeSubTab === 'domain' && (
+          <>
+            <View style={styles.eyeInputContainer}>
+              <MaterialCommunityIcons name="domain" size={24} color="#ff0000" />
+              <TextInput style={styles.eyeInput} placeholder="Enter domain (e.g., google.com)..." placeholderTextColor="#666" value={domainQuery} onChangeText={setDomainQuery} autoCapitalize="none" />
+            </View>
+
+            <TouchableOpacity style={[styles.eyeButton, loading && styles.buttonDisabled]} onPress={getDomainIntel} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="magnify-scan" size={20} color="#000" /><Text style={styles.eyeButtonText}>ANALYZE DOMAIN</Text></>}
+            </TouchableOpacity>
+
+            {domainResult && (
+              <View style={styles.eyeResultCard}>
+                <Text style={styles.domainTitle}>{domainResult.domain}</Text>
+                
+                {domainResult.ip_addresses.length > 0 && (
+                  <View style={styles.infoRow}>
+                    <MaterialCommunityIcons name="ip-network" size={18} color="#ff0000" />
+                    <Text style={styles.infoText}>IP: {domainResult.ip_addresses.join(', ')}</Text>
+                  </View>
+                )}
+
+                {domainResult.geo_location.country && (
+                  <>
+                    <Text style={styles.sectionTitle}>Location</Text>
+                    <WorldMap markers={[{ lat: domainResult.geo_location.lat, lon: domainResult.geo_location.lon, label: domainResult.domain }]} />
+                    <View style={styles.geoInfo}>
+                      <Text style={styles.geoItem}>{domainResult.geo_location.city}, {domainResult.geo_location.country}</Text>
+                      <Text style={styles.geoItem}>ISP: {domainResult.geo_location.isp}</Text>
+                      <Text style={styles.geoItem}>Org: {domainResult.geo_location.org}</Text>
+                    </View>
+                  </>
+                )}
+
+                {domainResult.technologies.length > 0 && (
+                  <>
+                    <Text style={styles.sectionTitle}>Technologies</Text>
+                    <View style={styles.techTags}>
+                      {domainResult.technologies.map((tech: string, i: number) => (
+                        <View key={i} style={styles.techTag}>
+                          <Text style={styles.techText}>{tech}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
+
+                <Text style={styles.sectionTitle}>Subdomains</Text>
+                {domainResult.subdomains.map((sub: string, i: number) => (
+                  <Text key={i} style={styles.subdomain}>{sub}</Text>
+                ))}
               </View>
             )}
           </>
         )}
       </ScrollView>
+    </View>
+  );
+
+  // Simple render functions for other tabs
+  const renderSimpleTab = (title: string, color: string, icon: string, content: React.ReactNode) => (
+    <View style={styles.tabContent}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}><Ionicons name="arrow-back" size={28} color={color} /></TouchableOpacity>
+        <Text style={[styles.headerTitle, { color }]}>{title}</Text>
+        <View style={{ width: 28 }} />
+      </View>
+      {content}
     </View>
   );
 
@@ -696,112 +592,158 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="light" />
       {activeTab === 'home' && renderHome()}
-      {activeTab === 'osint' && renderOSINT()}
-      {activeTab === 'password' && renderPassword()}
-      {activeTab === 'website' && renderWebsite()}
-      {activeTab === 'chat' && renderChat()}
-      {activeTab === 'intel' && renderIntel()}
-      {activeTab === 'defense' && renderDefense()}
+      {activeTab === 'eye' && renderEye()}
+      {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
+        <>
+          <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
+          <TouchableOpacity style={[styles.scanButton, loading && styles.buttonDisabled]} onPress={scanOSINT} disabled={loading}>{loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>SCAN</Text>}</TouchableOpacity>
+          <ScrollView>{osintResults.map((r, i) => <View key={i} style={styles.resultCard}><Text style={styles.platformName}>{r.platform}</Text><View style={[styles.statusBadge, { backgroundColor: r.exists ? '#00ff88' : '#ff4444' }]}><Text style={styles.statusText}>{r.exists ? 'FOUND' : 'NOT FOUND'}</Text></View></View>)}</ScrollView>
+        </>
+      ))}
+      {activeTab === 'password' && renderSimpleTab('Password Check', '#ff00ff', 'shield-lock', (
+        <>
+          <View style={[styles.inputContainer, { borderColor: '#ff00ff' }]}><MaterialCommunityIcons name="lock" size={24} color="#ff00ff" /><TextInput style={styles.input} placeholder="Password..." placeholderTextColor="#666" value={password} onChangeText={setPassword} secureTextEntry /></View>
+          <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff00ff' }, loading && styles.buttonDisabled]} onPress={checkPassword} disabled={loading}>{loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>CHECK</Text>}</TouchableOpacity>
+          {passwordResult && <View style={[styles.resultCard, { borderColor: '#ff00ff' }]}><Text style={[styles.strengthText, { color: passwordResult.strength === 'Strong' ? '#00ff88' : '#ff4444' }]}>{passwordResult.strength}</Text><Text style={styles.breachText}>{passwordResult.is_pwned ? `Found in ${passwordResult.breach_count} breaches!` : 'Not found in breaches'}</Text></View>}
+        </>
+      ))}
+      {activeTab === 'website' && renderSimpleTab('Website Analyzer', '#00ffff', 'web', (
+        <>
+          <View style={[styles.inputContainer, { borderColor: '#00ffff' }]}><MaterialCommunityIcons name="web" size={24} color="#00ffff" /><TextInput style={styles.input} placeholder="URL..." placeholderTextColor="#666" value={websiteUrl} onChangeText={setWebsiteUrl} /></View>
+          <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ffff' }, loading && styles.buttonDisabled]} onPress={analyzeWebsite} disabled={loading}>{loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>ANALYZE</Text>}</TouchableOpacity>
+          {websiteResult && <View style={[styles.resultCard, { borderColor: '#00ffff' }]}><Text style={styles.scoreText}>{websiteResult.overall_score}</Text>{websiteResult.headers.map((h: any, i: number) => <View key={i} style={styles.headerRow}><MaterialCommunityIcons name={h.present ? 'check-circle' : 'close-circle'} size={16} color={h.present ? '#00ff88' : '#ff4444'} /><Text style={styles.headerName}>{h.header}</Text></View>)}</View>}
+        </>
+      ))}
+      {activeTab === 'chat' && renderSimpleTab('AI Chat', '#ffff00', 'robot', (
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView ref={scrollViewRef} style={{ flex: 1 }}>{chatHistory.map((msg, i) => <View key={i} style={[styles.chatBubble, msg.role === 'user' ? styles.userBubble : styles.assistantBubble]}><Text style={styles.chatText}>{msg.content}</Text></View>)}</ScrollView>
+          <View style={styles.chatInputContainer}><TextInput style={styles.chatInput} placeholder="Ask..." placeholderTextColor="#666" value={chatMessage} onChangeText={setChatMessage} /><TouchableOpacity style={styles.sendButton} onPress={sendChat}><Ionicons name="send" size={20} color="#000" /></TouchableOpacity></View>
+        </KeyboardAvoidingView>
+      ))}
+      {activeTab === 'intel' && renderSimpleTab('Security Intel', '#ff6600', 'shield-bug', <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20 }}>CVE, Tech Detection, DDoS Analysis</Text>)}
+      {activeTab === 'defense' && renderSimpleTab('Defense Center', '#00ff00', 'shield-check', <Text style={{ color: '#fff', textAlign: 'center', marginTop: 20 }}>IP Rep, Firewall, Threats</Text>)}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
-  matrixContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' },
-  matrixChar: { position: 'absolute', color: '#00ff8830', fontSize: 14, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-  homeContainer: { flex: 1, paddingTop: 45, paddingHorizontal: 16 },
-  homeScroll: { flex: 1 },
-  logoContainer: { alignItems: 'center', marginBottom: 20 },
-  logoText: { fontSize: 56, fontWeight: 'bold', color: '#00ff88', textShadowColor: '#00ff88', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 15 },
-  subtitleText: { fontSize: 20, color: '#ff00ff', fontStyle: 'italic', textShadowColor: '#ff00ff', textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 },
-  taglineText: { fontSize: 12, color: '#666', marginTop: 2, letterSpacing: 2 },
+  homeScroll: { flex: 1, paddingTop: 45, paddingHorizontal: 16 },
+  logoContainer: { alignItems: 'center', marginBottom: 16 },
+  logoText: { fontSize: 48, fontWeight: 'bold', color: '#00ff88' },
+  subtitleText: { fontSize: 18, color: '#ff00ff', fontStyle: 'italic' },
+  taglineText: { fontSize: 11, color: '#666', marginTop: 2 },
   featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  featureCard: { width: '48%', backgroundColor: '#111', borderRadius: 14, padding: 14, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: '#222' },
-  featureCardWide: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, gap: 14 },
+  featureCard: { width: '48%', backgroundColor: '#111', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: '#222' },
+  featureCardWide: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, gap: 12 },
   wideCardText: { flex: 1 },
-  featureTitle: { color: '#fff', fontSize: 15, fontWeight: 'bold', marginTop: 6 },
+  featureTitle: { color: '#fff', fontSize: 14, fontWeight: 'bold', marginTop: 4 },
   featureDesc: { color: '#666', fontSize: 10, marginTop: 2 },
-  footerInline: { alignItems: 'center', paddingVertical: 20 },
-  footerText: { color: '#00ff88', fontSize: 10 },
-  versionText: { color: '#444', fontSize: 9, marginTop: 2 },
+  eyeCard: { backgroundColor: '#1a0a0a', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 2, borderColor: '#ff0000' },
+  eyeCardContent: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  eyeIconSmall: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#2a0a0a', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  eyeCardText: { flex: 1 },
+  eyeCardTitle: { color: '#ff0000', fontSize: 18, fontWeight: 'bold' },
+  eyeCardSubtitle: { color: '#ff6666', fontSize: 11, marginTop: 2 },
+  eyeCardStats: { flexDirection: 'row', justifyContent: 'space-around' },
+  eyeCardStat: { color: '#ff4444', fontSize: 11, fontWeight: 'bold' },
+  footerInline: { alignItems: 'center', paddingVertical: 16 },
+  footerText: { color: '#444', fontSize: 10 },
   tabContent: { flex: 1, paddingTop: 45, paddingHorizontal: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   headerTitle: { color: '#00ff88', fontSize: 18, fontWeight: 'bold' },
+  eyeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  eyeTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  eyeTitle: { color: '#ff0000', fontSize: 16, fontWeight: 'bold' },
+  statsBar: { flexDirection: 'row', justifyContent: 'space-around', backgroundColor: '#1a0a0a', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#ff000040' },
+  statItem: { alignItems: 'center' },
+  statValue: { color: '#ff0000', fontSize: 16, fontWeight: 'bold' },
+  statLabel: { color: '#ff6666', fontSize: 9 },
+  eyeSubTabs: { flexDirection: 'row', marginBottom: 12, backgroundColor: '#1a0a0a', borderRadius: 8, padding: 3 },
+  eyeSubTab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 6, gap: 4 },
+  eyeSubTabActive: { backgroundColor: '#ff0000' },
+  eyeSubTabText: { color: '#ff0000', fontSize: 10, fontWeight: 'bold' },
+  eyeSubTabTextActive: { color: '#000' },
+  searchTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  searchTypeBtn: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#1a1a1a', borderRadius: 6 },
+  searchTypeBtnActive: { backgroundColor: '#ff0000' },
+  searchTypeText: { color: '#888', fontSize: 10, fontWeight: 'bold' },
+  searchTypeTextActive: { color: '#000' },
+  eyeInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1a0a0a', borderRadius: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ff0000', marginBottom: 10 },
+  eyeInput: { flex: 1, color: '#fff', fontSize: 14, paddingVertical: 12, marginLeft: 8 },
+  eyeButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ff0000', paddingVertical: 14, borderRadius: 10, marginBottom: 14, gap: 8 },
+  eyeButtonText: { color: '#000', fontSize: 14, fontWeight: 'bold' },
+  eyeResultCard: { backgroundColor: '#1a0a0a', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#ff000060', marginBottom: 10 },
+  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  resultTitle: { color: '#ff0000', fontSize: 16, fontWeight: 'bold' },
+  resultSources: { color: '#ff6666', fontSize: 11 },
+  resultItem: { backgroundColor: '#0d0505', borderRadius: 8, padding: 10, marginBottom: 8 },
+  resultItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  resultSource: { color: '#ff4444', fontSize: 12, fontWeight: 'bold' },
+  confidenceBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  confidenceText: { color: '#000', fontSize: 9, fontWeight: 'bold' },
+  resultType: { color: '#888', fontSize: 10, marginBottom: 4 },
+  resultData: { backgroundColor: '#0a0a0a', borderRadius: 4, padding: 6 },
+  resultDataItem: { color: '#ccc', fontSize: 10, marginBottom: 2 },
+  sectionTitle: { color: '#ff0000', fontSize: 12, fontWeight: 'bold', marginTop: 12, marginBottom: 8 },
+  sectionSubtitle: { color: '#ff6666', fontSize: 10, marginBottom: 8 },
+  mapContainer: { backgroundColor: '#0a0a0a', borderRadius: 10, padding: 8, marginBottom: 12, borderWidth: 1, borderColor: '#ff000030' },
+  regionList: { gap: 8 },
+  regionCard: { backgroundColor: '#0d0505', borderRadius: 8, padding: 10 },
+  regionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  regionName: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  regionCount: { color: '#ff0000', fontSize: 12, fontWeight: 'bold' },
+  regionTypes: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  typeTag: { backgroundColor: '#ff000020', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  typeText: { color: '#ff6666', fontSize: 9 },
+  totalCameras: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, padding: 12, backgroundColor: '#1a0a0a', borderRadius: 8 },
+  totalText: { color: '#ff0000', fontSize: 14, fontWeight: 'bold' },
+  breachHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  breachInfo: { flex: 1 },
+  breachStatus: { fontSize: 18, fontWeight: 'bold' },
+  breachEmail: { color: '#888', fontSize: 12 },
+  breachCount: { color: '#ff6666', fontSize: 14, marginBottom: 12 },
+  exposedData: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+  exposedTag: { backgroundColor: '#ff000030', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  exposedText: { color: '#ff4444', fontSize: 11, fontWeight: 'bold' },
+  breachCard: { backgroundColor: '#0d0505', borderRadius: 8, padding: 10, marginBottom: 6 },
+  breachName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
+  breachDate: { color: '#888', fontSize: 11 },
+  breachRecords: { color: '#ff4444', fontSize: 11 },
+  domainTitle: { color: '#ff0000', fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  infoText: { color: '#fff', fontSize: 13 },
+  geoInfo: { backgroundColor: '#0d0505', borderRadius: 8, padding: 10 },
+  geoItem: { color: '#ccc', fontSize: 12, marginBottom: 2 },
+  techTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  techTag: { backgroundColor: '#ff000020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  techText: { color: '#ff6666', fontSize: 11, fontWeight: 'bold' },
+  subdomain: { color: '#888', fontSize: 12, marginBottom: 4 },
   inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#00ff88', marginBottom: 10 },
-  input: { flex: 1, color: '#fff', fontSize: 14, paddingVertical: 10, marginLeft: 8 },
-  scanButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#00ff88', paddingVertical: 12, borderRadius: 10, marginBottom: 14, gap: 8 },
+  input: { flex: 1, color: '#fff', fontSize: 14, paddingVertical: 12, marginLeft: 8 },
+  scanButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#00ff88', paddingVertical: 12, borderRadius: 10, marginBottom: 12, gap: 8 },
   buttonDisabled: { opacity: 0.6 },
   scanButtonText: { color: '#000', fontSize: 14, fontWeight: 'bold' },
   resultsContainer: { flex: 1 },
-  resultCard: { backgroundColor: '#111', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#00ff88' },
-  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  resultCard: { backgroundColor: '#111', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#00ff88', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   platformName: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   statusText: { color: '#000', fontSize: 10, fontWeight: 'bold' },
-  resultUrl: { color: '#666', fontSize: 10 },
-  resultLabel: { color: '#888', fontSize: 10, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 },
-  strengthText: { fontSize: 24, fontWeight: 'bold', marginBottom: 12 },
-  breachContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 6 },
-  breachText: { color: '#ff4444', fontSize: 13 },
-  scoreText: { fontSize: 20, fontWeight: 'bold', color: '#00ffff', marginBottom: 12 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 6 },
-  headerName: { color: '#ccc', fontSize: 12 },
-  chatContainer: { flex: 1 },
-  welcomeChat: { alignItems: 'center', paddingTop: 40 },
-  welcomeText: { color: '#ffff00', fontSize: 18, fontWeight: 'bold', marginTop: 8 },
-  welcomeSubtext: { color: '#888', fontSize: 12, marginTop: 4 },
+  strengthText: { fontSize: 24, fontWeight: 'bold' },
+  breachText: { color: '#888', fontSize: 12 },
+  scoreText: { color: '#00ffff', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  headerName: { color: '#ccc', fontSize: 11 },
   chatBubble: { maxWidth: '85%', padding: 10, borderRadius: 12, marginBottom: 8 },
   userBubble: { alignSelf: 'flex-end', backgroundColor: '#1a3a2a', borderColor: '#00ff88', borderWidth: 1 },
   assistantBubble: { alignSelf: 'flex-start', backgroundColor: '#1a1a2a', borderColor: '#ffff00', borderWidth: 1 },
-  chatText: { color: '#fff', fontSize: 13, lineHeight: 18 },
-  chatInputContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#222' },
-  chatInput: { flex: 1, backgroundColor: '#111', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 13, maxHeight: 80, borderWidth: 1, borderColor: '#ffff00' },
-  sendButton: { backgroundColor: '#ffff00', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
-  subTabContainer: { flexDirection: 'row', marginBottom: 12, backgroundColor: '#111', borderRadius: 8, padding: 3 },
-  subTab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  subTabText: { color: '#888', fontSize: 12, fontWeight: 'bold' },
-  cveHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cveId: { color: '#ff6600', fontSize: 16, fontWeight: 'bold' },
-  severityBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  severityText: { color: '#000', fontSize: 10, fontWeight: 'bold' },
-  cvssScore: { color: '#ff6600', fontSize: 14, fontWeight: 'bold', marginBottom: 8 },
-  cveDescription: { color: '#ccc', fontSize: 12, lineHeight: 18 },
-  techItem: { color: '#fff', fontSize: 13, marginBottom: 4 },
-  techRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  techName: { color: '#fff', fontSize: 13 },
-  techConf: { fontSize: 10, fontWeight: 'bold' },
-  ddosHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  riskBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  riskText: { color: '#000', fontSize: 12, fontWeight: 'bold' },
-  cdnText: { color: '#00ff88', fontSize: 12, marginBottom: 8 },
-  vulnItem: { backgroundColor: '#1a1a1a', padding: 8, borderRadius: 6, marginBottom: 6 },
-  vulnType: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  vulnMit: { color: '#00ff88', fontSize: 10, marginTop: 2 },
-  ipHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  ipAddress: { color: '#00ff00', fontSize: 16, fontWeight: 'bold' },
-  maliciousBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
-  maliciousText: { color: '#000', fontSize: 11, fontWeight: 'bold' },
-  abuseScore: { color: '#ffff00', fontSize: 14, fontWeight: 'bold', marginBottom: 6 },
-  ipInfo: { color: '#888', fontSize: 12, marginBottom: 2 },
-  threatTypes: { marginTop: 8 },
-  threatType: { color: '#ff4444', fontSize: 12 },
-  recommendation: { color: '#00ff88', fontSize: 11, marginBottom: 2 },
-  fwTypeContainer: { flexDirection: 'row', marginBottom: 10, gap: 6 },
-  fwTypeBtn: { flex: 1, backgroundColor: '#222', paddingVertical: 8, borderRadius: 6, alignItems: 'center' },
-  fwTypeBtnActive: { backgroundColor: '#00ff00' },
-  fwTypeText: { color: '#888', fontSize: 11, fontWeight: 'bold' },
-  fwTypeTextActive: { color: '#000' },
-  ruleItem: { backgroundColor: '#1a1a1a', padding: 8, borderRadius: 6, marginBottom: 6 },
-  ruleCode: { color: '#00ff00', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-  ruleDesc: { color: '#888', fontSize: 10, marginTop: 2 },
-  threatItem: { backgroundColor: '#1a1a1a', padding: 10, borderRadius: 6, marginBottom: 8 },
-  threatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  threatName: { color: '#fff', fontSize: 13, fontWeight: 'bold', flex: 1 },
-  threatSeverity: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  threatSeverityText: { color: '#000', fontSize: 9, fontWeight: 'bold' },
-  threatDesc: { color: '#ccc', fontSize: 11, marginBottom: 4 },
-  threatIndicators: { color: '#666', fontSize: 10 },
-  abuseEmail: { color: '#00ff00', fontSize: 12, marginBottom: 4 },
-  abuseReport: { color: '#ccc', fontSize: 11, lineHeight: 16, marginTop: 8 },
+  chatText: { color: '#fff', fontSize: 13 },
+  chatInputContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#222' },
+  chatInput: { flex: 1, backgroundColor: '#111', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 13, borderWidth: 1, borderColor: '#ffff00' },
+  sendButton: { backgroundColor: '#ffff00', width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
+  eyeContainer: { alignItems: 'center', justifyContent: 'center', marginVertical: 20 },
+  eyeOuter: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#ff000020', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#ff0000' },
+  eyeInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#ff0000', alignItems: 'center', justifyContent: 'center' },
+  eyePupil: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  eyeHighlight: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff', position: 'absolute', top: 5, left: 5 },
 });
