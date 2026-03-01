@@ -24,10 +24,13 @@ db = client[os.environ['DB_NAME']]
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # Create the main app
-app = FastAPI(title="X=π by Carbi", description="Cybersecurity Toolkit")
+app = FastAPI(title="X=π by Carbi - El Ojo del Diablo", description="Cybersecurity Toolkit + México Edition")
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# Import Mexico module
+from eye_mexico import eye_router
 
 # ============ Models ============
 
