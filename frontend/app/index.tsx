@@ -1842,6 +1842,10 @@ export default function App() {
       {activeTab === 'home' && renderHome()}
       {activeTab === 'eye' && renderEye()}
       {activeTab === 'cellular' && renderCellular()}
+      {activeTab === 'secrets' && renderSecrets()}
+      {activeTab === 'dorks' && renderDorks()}
+      {activeTab === 'mexosint' && renderMexOsint()}
+      {activeTab === 'realapis' && renderRealApis()}
       {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
         <>
           <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
