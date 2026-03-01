@@ -2290,6 +2290,209 @@ export default function App() {
     </View>
   );
 
+
+  // ========== CYBER TOOLS RENDER ==========
+  const TOOL_CONFIG: Record<CyberToolsSubTab, { label: string; icon: string; placeholder: string; placeholder2?: string; button: string; color: string }> = {
+    portscan: { label: 'PORT SCAN', icon: 'lan', placeholder: 'IP o dominio (ej: google.com)', placeholder2: 'Puertos (ej: 22,80,443)', button: 'ESCANEAR', color: '#ff0066' },
+    dns: { label: 'DNS', icon: 'dns', placeholder: 'Dominio (ej: google.com)', button: 'RESOLVER', color: '#00ddff' },
+    whois: { label: 'WHOIS', icon: 'earth', placeholder: 'Dominio (ej: google.com)', button: 'CONSULTAR', color: '#ffaa00' },
+    hash: { label: 'HASH', icon: 'pound', placeholder: 'Texto a hashear', button: 'GENERAR', color: '#ff4400' },
+    crack: { label: 'CRACK', icon: 'lock-open', placeholder: 'Hash a crackear (MD5/SHA1/SHA256)', button: 'CRACKEAR', color: '#ff0000' },
+    encode: { label: 'ENCODE', icon: 'swap-horizontal', placeholder: 'Texto a codificar/decodificar', button: 'EJECUTAR', color: '#aa44ff' },
+    jwt: { label: 'JWT', icon: 'code-json', placeholder: 'Token JWT completo', button: 'DECODIFICAR', color: '#ffcc00' },
+    passgen: { label: 'PASS GEN', icon: 'key-plus', placeholder: 'Longitud (default: 20)', button: 'GENERAR', color: '#00ff88' },
+    passcheck: { label: 'PASS CHK', icon: 'shield-check', placeholder: 'Contrasena a analizar', button: 'ANALIZAR', color: '#00cc66' },
+    subnet: { label: 'SUBNET', icon: 'sitemap', placeholder: 'CIDR (ej: 192.168.1.0/24)', button: 'CALCULAR', color: '#00aaff' },
+    headers: { label: 'HEADERS', icon: 'web', placeholder: 'URL (ej: google.com)', button: 'INSPECCIONAR', color: '#ff6600' },
+    ping: { label: 'PING', icon: 'access-point', placeholder: 'Host (ej: google.com)', button: 'PING', color: '#44ff44' },
+  };
+
+  const renderCyberToolResult = () => {
+    if (!ctResult) return null;
+    if (ctResult.error) return <Text style={{ color: '#ff4444', fontSize: 12, padding: 10 }}>{ctResult.error}</Text>;
+
+    const cfg = TOOL_CONFIG[ctSubTab];
+    return (
+      <View style={[styles.eyeResultCard, { borderColor: cfg.color + '60' }]}>
+        <Text style={[styles.resultTitle, { color: cfg.color }]}>{ctResult.tool}</Text>
+
+        {/* Port Scan */}
+        {ctSubTab === 'portscan' && ctResult.results && (
+          <>
+            <Text style={{ color: '#ccc', fontSize: 10 }}>IP: {ctResult.ip} | OS: {ctResult.os_detection || 'N/A'}</Text>
+            <Text style={{ color: cfg.color, fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>{ctResult.open} abiertos / {ctResult.total_scanned} escaneados</Text>
+            {ctResult.results.filter((r: any) => r.state === 'open').map((r: any, i: number) => (
+              <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#00ff88' }]}>
+                <Text style={{ color: '#00ff88', fontSize: 11 }}>{r.port}/{r.service} - OPEN</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* DNS */}
+        {ctSubTab === 'dns' && ctResult.records && Object.entries(ctResult.records).map(([type, vals]) => (
+          <View key={type} style={{ marginTop: 4 }}>
+            <Text style={{ color: cfg.color, fontSize: 11, fontWeight: 'bold' }}>{type}:</Text>
+            {(vals as string[]).map((v: string, i: number) => (
+              <Text key={i} style={{ color: '#ccc', fontSize: 10, fontFamily: 'monospace', paddingLeft: 8 }}>{v}</Text>
+            ))}
+          </View>
+        ))}
+
+        {/* WHOIS */}
+        {ctSubTab === 'whois' && ctResult.data && Object.entries(ctResult.data).filter(([_, v]) => v && (typeof v !== 'object' || (Array.isArray(v) && v.length > 0))).map(([k, v]) => (
+          <View key={k} style={styles.cellRow}>
+            <Text style={{ color: '#888', fontSize: 10 }}>{k}</Text>
+            <Text style={{ color: '#ccc', fontSize: 10, flex: 1, textAlign: 'right' }} numberOfLines={1}>{Array.isArray(v) ? (v as string[]).join(', ') : String(v)}</Text>
+          </View>
+        ))}
+
+        {/* Hash */}
+        {ctSubTab === 'hash' && ctResult.hashes && Object.entries(ctResult.hashes).map(([algo, hash]) => (
+          <View key={algo} style={{ marginTop: 4 }}>
+            <Text style={{ color: cfg.color, fontSize: 10, fontWeight: 'bold' }}>{algo.toUpperCase()}:</Text>
+            <Text selectable style={{ color: '#ccc', fontSize: 8, fontFamily: 'monospace' }}>{hash as string}</Text>
+          </View>
+        ))}
+
+        {/* Crack */}
+        {ctSubTab === 'crack' && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <MaterialCommunityIcons name={ctResult.cracked ? 'lock-open' : 'lock'} size={24} color={ctResult.cracked ? '#00ff88' : '#ff4444'} />
+            <View>
+              <Text style={{ color: ctResult.cracked ? '#00ff88' : '#ff4444', fontSize: 14, fontWeight: 'bold' }}>{ctResult.cracked ? `CRACKEADO: ${ctResult.password}` : 'NO ENCONTRADO'}</Text>
+              <Text style={{ color: '#888', fontSize: 9 }}>{ctResult.attempts} intentos | Tipo: {ctResult.detected_type || 'N/A'}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Encode */}
+        {ctSubTab === 'encode' && (
+          <>
+            <Text style={{ color: '#888', fontSize: 9 }}>Operacion: {ctResult.operation}</Text>
+            <Text selectable style={{ color: '#ccc', fontSize: 11, fontFamily: 'monospace', marginTop: 4, backgroundColor: '#111', padding: 8, borderRadius: 6 }}>{ctResult.output}</Text>
+          </>
+        )}
+
+        {/* JWT */}
+        {ctSubTab === 'jwt' && (
+          <>
+            <Text style={{ color: '#888', fontSize: 10 }}>Algoritmo: {ctResult.algorithm} | {ctResult.expired ? 'EXPIRADO' : 'VALIDO'}</Text>
+            {ctResult.header && <><Text style={{ color: cfg.color, fontSize: 10, fontWeight: 'bold', marginTop: 6 }}>Header:</Text><Text selectable style={{ color: '#ccc', fontSize: 9, fontFamily: 'monospace' }}>{JSON.stringify(ctResult.header, null, 2)}</Text></>}
+            {ctResult.payload && <><Text style={{ color: cfg.color, fontSize: 10, fontWeight: 'bold', marginTop: 6 }}>Payload:</Text><Text selectable style={{ color: '#ccc', fontSize: 9, fontFamily: 'monospace' }}>{JSON.stringify(ctResult.payload, null, 2)}</Text></>}
+          </>
+        )}
+
+        {/* Password Gen */}
+        {ctSubTab === 'passgen' && ctResult.passwords && ctResult.passwords.map((p: any, i: number) => (
+          <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#00ff88' }]}>
+            <Text selectable style={{ color: '#00ff88', fontSize: 12, fontFamily: 'monospace' }}>{p.password}</Text>
+            <Text style={{ color: '#888', fontSize: 8 }}>{p.strength} | {p.entropy_bits} bits</Text>
+          </View>
+        ))}
+
+        {/* Password Check */}
+        {ctSubTab === 'passcheck' && (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <Text style={{ color: ctResult.score >= 6 ? '#00ff88' : ctResult.score >= 4 ? '#ffaa00' : '#ff4444', fontSize: 20, fontWeight: 'bold' }}>{ctResult.score}/10</Text>
+              <Text style={{ color: ctResult.score >= 6 ? '#00ff88' : ctResult.score >= 4 ? '#ffaa00' : '#ff4444', fontSize: 14, fontWeight: 'bold' }}>{ctResult.strength}</Text>
+            </View>
+            <Text style={{ color: '#888', fontSize: 10 }}>Entropia: {ctResult.entropy_bits} bits | Crackeo: {ctResult.crack_time_estimate}</Text>
+            {ctResult.is_common && <Text style={{ color: '#ff0000', fontSize: 11, fontWeight: 'bold' }}>CONTRASENA COMUN!</Text>}
+            {ctResult.feedback.map((f: string, i: number) => <Text key={i} style={{ color: '#ffaa00', fontSize: 9 }}>- {f}</Text>)}
+          </>
+        )}
+
+        {/* Subnet */}
+        {ctSubTab === 'subnet' && (
+          <>
+            {['network_address', 'broadcast_address', 'netmask', 'first_host', 'last_host', 'usable_hosts', 'prefix_length', 'is_private'].map(k => (
+              <View key={k} style={styles.cellRow}>
+                <Text style={{ color: '#888', fontSize: 10 }}>{k.replace(/_/g, ' ')}</Text>
+                <Text style={{ color: '#ccc', fontSize: 11, fontFamily: 'monospace' }}>{String((ctResult as any)[k])}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* HTTP Headers */}
+        {ctSubTab === 'headers' && (
+          <>
+            <Text style={{ color: '#888', fontSize: 10 }}>Status: {ctResult.status_code} | Server: {ctResult.server}</Text>
+            <Text style={{ color: cfg.color, fontSize: 11, fontWeight: 'bold', marginTop: 6 }}>Security Grade: {ctResult.security_grade}</Text>
+            {ctResult.security_headers && Object.entries(ctResult.security_headers).map(([k, v]) => (
+              <View key={k} style={styles.cellRow}>
+                <Text style={{ color: '#888', fontSize: 8, flex: 1 }}>{k}</Text>
+                <Text style={{ color: (v as string) === 'MISSING' ? '#ff4444' : '#00ff88', fontSize: 8 }} numberOfLines={1}>{(v as string).substring(0, 30)}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* Ping */}
+        {ctSubTab === 'ping' && (
+          <>
+            <Text style={{ color: '#888', fontSize: 10 }}>IP: {ctResult.ip} | Loss: {ctResult.packet_loss}</Text>
+            <Text style={{ color: cfg.color, fontSize: 12 }}>Min: {ctResult.min_ms}ms | Avg: {ctResult.avg_ms}ms | Max: {ctResult.max_ms}ms</Text>
+            {ctResult.results.map((r: any, i: number) => (
+              <Text key={i} style={{ color: r.status === 'ok' ? '#00ff88' : '#ff4444', fontSize: 9, fontFamily: 'monospace' }}>seq={r.seq} time={r.time_ms}ms {r.status}</Text>
+            ))}
+          </>
+        )}
+      </View>
+    );
+  };
+
+  const renderCyberTools = () => {
+    const cfg = TOOL_CONFIG[ctSubTab];
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.eyeHeader}>
+          <TouchableOpacity onPress={() => setActiveTab('home')}>
+            <Ionicons name="arrow-back" size={28} color="#aa00ff" />
+          </TouchableOpacity>
+          <View style={styles.eyeTitleContainer}>
+            <MaterialCommunityIcons name="tools" size={24} color="#aa00ff" />
+            <Text style={[styles.eyeTitle, { color: '#aa00ff' }]}>CYBER TOOLS</Text>
+          </View>
+          <View style={{ width: 28 }} />
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8, maxHeight: 36 }}>
+          {(Object.keys(TOOL_CONFIG) as CyberToolsSubTab[]).map(key => (
+            <TouchableOpacity key={key} style={[styles.cellSubTab, ctSubTab === key && { backgroundColor: TOOL_CONFIG[key].color }]} onPress={() => { setCtSubTab(key); setCtResult(null); setCtInput(''); setCtInput2(''); }}>
+              <Text style={[styles.cellSubTabText, { color: ctSubTab === key ? '#000' : TOOL_CONFIG[key].color, fontSize: 8 }]}>{TOOL_CONFIG[key].label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={[styles.inputContainer, { borderColor: cfg.color }]}>
+            <MaterialCommunityIcons name={cfg.icon as any} size={20} color={cfg.color} />
+            <TextInput style={styles.input} placeholder={cfg.placeholder} placeholderTextColor="#666" value={ctInput} onChangeText={setCtInput} secureTextEntry={ctSubTab === 'passcheck'} />
+          </View>
+          {cfg.placeholder2 && (
+            <View style={[styles.inputContainer, { borderColor: cfg.color + '80', marginTop: 6 }]}>
+              <TextInput style={styles.input} placeholder={cfg.placeholder2} placeholderTextColor="#666" value={ctInput2} onChangeText={setCtInput2} />
+            </View>
+          )}
+          {ctSubTab === 'encode' && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 6, maxHeight: 28 }}>
+              {['base64_encode', 'base64_decode', 'hex_encode', 'hex_decode', 'url_encode', 'url_decode', 'rot13', 'binary', 'morse_encode', 'ascii', 'reverse'].map(op => (
+                <TouchableOpacity key={op} onPress={() => setCtEncodeOp(op)} style={[styles.cellTag, { borderColor: ctEncodeOp === op ? cfg.color : '#333', marginRight: 3 }]}>
+                  <Text style={{ color: ctEncodeOp === op ? cfg.color : '#666', fontSize: 7 }}>{op.replace('_', ' ').toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+          <TouchableOpacity style={[styles.scanButton, { backgroundColor: cfg.color }, loading && styles.buttonDisabled]} onPress={runCyberTool} disabled={loading}>
+            {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name={cfg.icon as any} size={18} color="#000" /><Text style={styles.scanButtonText}>{cfg.button}</Text></>}
+          </TouchableOpacity>
+          {renderCyberToolResult()}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const renderSimpleTab = (title: string, color: string, icon: string, content: React.ReactNode) => (
     <View style={styles.tabContent}>
       <View style={styles.header}>
