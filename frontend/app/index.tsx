@@ -918,6 +918,24 @@ export default function App() {
         </View>
       </TouchableOpacity>
 
+      {/* CYBER TOOLS MODULE - FUNCTIONAL */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#aa00ff', backgroundColor: '#1a001a' }]} onPress={() => setActiveTab('cybertools')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a002a' }]}>
+            <MaterialCommunityIcons name="tools" size={36} color="#aa00ff" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#aa00ff' }]}>CYBER TOOLS</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#8800cc' }]}>Port Scan | DNS | WHOIS | Hash | Crack | Encode</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#cc44ff' }]}>14 Tools</Text>
+          <Text style={[styles.eyeCardStat, { color: '#cc44ff' }]}>100% Real</Text>
+          <Text style={[styles.eyeCardStat, { color: '#cc44ff' }]}>Funcional</Text>
+        </View>
+      </TouchableOpacity>
+
       {/* PENTESTING LAB MODULE */}
       <TouchableOpacity style={[styles.cellCard, { borderColor: '#ff0066', backgroundColor: '#1a0016' }]} onPress={() => setActiveTab('pentest')}>
         <View style={styles.eyeCardContent}>
