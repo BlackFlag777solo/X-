@@ -380,6 +380,192 @@ export default function App() {
     }
   };
 
+  // ========== SECRET SCANNER API FUNCTIONS ==========
+  const scanSecrets = async () => {
+    if (!secretScanText.trim()) return;
+    setLoading(true);
+    setSecretScanResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/secrets/scan`, { text: secretScanText });
+      setSecretScanResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const loadSecretPatterns = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/secrets/patterns`);
+      setSecretPatterns(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadKeyhacks = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/secrets/keyhacks`);
+      setKeyhacksData(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  // ========== GOOGLE DORKS API FUNCTIONS ==========
+  const loadDorksDatabase = async () => {
+    try {
+      const params: string[] = [];
+      if (dorkSearchFilter) params.push(`search=${dorkSearchFilter}`);
+      if (dorkCategoryFilter) params.push(`category=${dorkCategoryFilter}`);
+      const qs = params.length > 0 ? `?${params.join('&')}` : '';
+      const response = await axios.get(`${API_URL}/api/dorks/database${qs}`);
+      setDorksData(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadDorksOperators = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/dorks/operators`);
+      setDorksOperators(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const buildDork = async () => {
+    if (!dorkTarget.trim()) return;
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/dorks/build?target=${dorkTarget}&dork_type=${dorkType}`);
+      setDorkBuilderResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  // ========== MEXICO OSINT v2 API FUNCTIONS ==========
+  const loadMexDashboard = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/mexico/dashboard`);
+      setMexDashboard(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadMexStates = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/mexico/states`);
+      setMexStates(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadMexCities = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/mexico/cities`);
+      setMexCities(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const lookupMexZip = async () => {
+    if (!mexZipInput.trim()) return;
+    setLoading(true);
+    setMexZipResult(null);
+    try {
+      const response = await axios.get(`${API_URL}/api/mexico/zipcode/${mexZipInput}`);
+      setMexZipResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const validateCurp = async () => {
+    if (!mexCurpInput.trim()) return;
+    setLoading(true);
+    setMexCurpResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/mexico/validate/curp?curp=${mexCurpInput}`);
+      setMexCurpResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const loadMexTelecom = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/mexico/telecom`);
+      setMexTelecom(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  // ========== REAL APIS FUNCTIONS ==========
+  const shodanLookup = async () => {
+    if (!shodanIp.trim()) return;
+    setLoading(true);
+    setShodanResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/real/shodan-lookup`, { ip: shodanIp });
+      setShodanResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const realBreachCheck = async () => {
+    if (!realBreachEmail.trim()) return;
+    setLoading(true);
+    setRealBreachResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/real/breach-check`, { email: realBreachEmail });
+      setRealBreachResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const checkSSL = async () => {
+    if (!sslDomain.trim()) return;
+    setLoading(true);
+    setSslResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/real/ssl-check`, { domain: sslDomain });
+      setSslResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const checkWeather = async () => {
+    if (!weatherCity.trim()) return;
+    setLoading(true);
+    setWeatherResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/real/weather`, { city: weatherCity });
+      setWeatherResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const checkSafeBrowsing = async () => {
+    if (!safeBrowsingUrl.trim()) return;
+    setLoading(true);
+    setSafeBrowsingResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/real/safe-browsing`, { url: safeBrowsingUrl });
+      setSafeBrowsingResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  // ========== useEffects for new modules ==========
+  useEffect(() => {
+    if (activeTab === 'secrets') {
+      if (secretsSubTab === 'patterns' && !secretPatterns) loadSecretPatterns();
+      if (secretsSubTab === 'keyhacks' && !keyhacksData) loadKeyhacks();
+    }
+  }, [activeTab, secretsSubTab]);
+
+  useEffect(() => {
+    if (activeTab === 'dorks') {
+      if (dorksSubTab === 'database') loadDorksDatabase();
+      if (dorksSubTab === 'operators' && !dorksOperators) loadDorksOperators();
+    }
+  }, [activeTab, dorksSubTab, dorkCategoryFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'mexosint') {
+      if (mexSubTab === 'dashboard' && !mexDashboard) loadMexDashboard();
+      if (mexSubTab === 'states' && !mexStates) loadMexStates();
+      if (mexSubTab === 'cities' && !mexCities) loadMexCities();
+      if (mexSubTab === 'telecom' && !mexTelecom) loadMexTelecom();
+    }
+  }, [activeTab, mexSubTab]);
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
