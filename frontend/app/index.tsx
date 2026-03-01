@@ -20,7 +20,7 @@ import axios from 'axios';
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest';
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools';
 type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 type CellularSubTab = 'dashboard' | 'tools' | 'hardware' | 'attacks' | 'scan' | 'mexico';
 type SecretsSubTab = 'scanner' | 'patterns' | 'keyhacks';
