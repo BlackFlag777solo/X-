@@ -645,8 +645,80 @@ export default function App() {
         </View>
       </TouchableOpacity>
 
+      {/* SECRET SCANNER MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#ff4400', backgroundColor: '#1a0a00' }]} onPress={() => setActiveTab('secrets')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a1000' }]}>
+            <MaterialCommunityIcons name="key-alert" size={36} color="#ff4400" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#ff4400' }]}>SECRET SCANNER</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#cc6633' }]}>KeyHacks | 68 Patrones | API Key Detection</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#ff6633' }]}>68 Regex</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff6633' }]}>25 KeyHacks</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff6633' }]}>9 Categorias</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* GOOGLE DORKS MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#ffaa00', backgroundColor: '#1a1200' }]} onPress={() => setActiveTab('dorks')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a1a00' }]}>
+            <MaterialCommunityIcons name="google" size={36} color="#ffaa00" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#ffaa00' }]}>GOOGLE DORKS</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#cc8800' }]}>GHDB | Operadores | Constructor Dorks</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#ffcc44' }]}>50 Dorks</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ffcc44' }]}>22 Operadores</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ffcc44' }]}>5 Tipos</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* MEXICO OSINT v2 MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#00cc66', backgroundColor: '#001a0a' }]} onPress={() => setActiveTab('mexosint')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#002a10' }]}>
+            <MaterialCommunityIcons name="map-marker-radius" size={36} color="#00cc66" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#00cc66' }]}>MEXICO OSINT v2</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#009944' }]}>32 Estados | CURP | RFC | Telecom | C.P.</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#00cc66' }]}>32 Estados</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00cc66' }]}>20 Ciudades</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00cc66' }]}>8 Telecom</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* REAL APIS MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#00ddff', backgroundColor: '#001a22' }]} onPress={() => setActiveTab('realapis')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#002a33' }]}>
+            <MaterialCommunityIcons name="api" size={36} color="#00ddff" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#00ddff' }]}>APIS REALES</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#0099bb' }]}>Shodan | Breach | SSL | Weather | SafeBrowse</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#00ddff' }]}>5 APIs Live</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00ddff' }]}>Datos Reales</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00ddff' }]}>En Vivo</Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.footerInline}>
-        <Text style={styles.footerText}>X=pi by Carbi - v4.0</Text>
+        <Text style={styles.footerText}>X=pi by Carbi - v5.0</Text>
       </View>
     </ScrollView>
   );
