@@ -2533,6 +2533,7 @@ export default function App() {
       {activeTab === 'mexosint' && renderMexOsint()}
       {activeTab === 'realapis' && renderRealApis()}
       {activeTab === 'pentest' && renderPentest()}
+      {activeTab === 'cybertools' && renderCyberTools()}
       {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
         <>
           <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
