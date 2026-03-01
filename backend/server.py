@@ -1845,6 +1845,9 @@ async def get_global_stats():
 # Include the router
 app.include_router(api_router)
 
+# Include Mexico router
+app.include_router(eye_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
