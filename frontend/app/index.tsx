@@ -28,6 +28,7 @@ type DorksSubTab = 'database' | 'operators' | 'builder';
 type MexSubTab = 'dashboard' | 'states' | 'cities' | 'zipcode' | 'curp' | 'telecom';
 type RealSubTab = 'shodan' | 'breach' | 'ssl' | 'weather' | 'safebrowsing';
 type PentestSubTab = 'dashboard' | 'portscan' | 'sniffer' | 'bruteforce' | 'exploits' | 'trojans' | 'sitemap' | 'recon';
+type CyberToolsSubTab = 'portscan' | 'dns' | 'whois' | 'hash' | 'crack' | 'encode' | 'jwt' | 'passgen' | 'passcheck' | 'subnet' | 'headers' | 'ping';
 
 // World Map Component
 const WorldMap = ({ markers = [], onRegionPress }: { markers: any[], onRegionPress?: (region: any) => void }) => {
