@@ -201,6 +201,56 @@ class ThreatFeedResult(BaseModel):
     threats: List[dict]
     categories: dict
 
+# ============ El Ojo del Diablo Models ============
+
+class DeepSearchRequest(BaseModel):
+    query: str
+    search_type: str  # email, phone, username, domain, ip, person, all
+
+class DeepSearchResult(BaseModel):
+    query: str
+    search_type: str
+    total_results: int
+    sources_searched: int
+    results: List[dict]
+    geo_data: List[dict]
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class PublicCameraResult(BaseModel):
+    total_cameras: int
+    cameras: List[dict]
+    regions: dict
+
+class DataBreachCheckRequest(BaseModel):
+    email: str
+
+class DataBreachResult(BaseModel):
+    email: str
+    is_breached: bool
+    breach_count: int
+    breaches: List[dict]
+    exposed_data: List[str]
+
+class DomainIntelRequest(BaseModel):
+    domain: str
+
+class DomainIntelResult(BaseModel):
+    domain: str
+    ip_addresses: List[str]
+    dns_records: dict
+    whois_info: dict
+    geo_location: dict
+    technologies: List[str]
+    subdomains: List[str]
+
+class GlobalStatsResult(BaseModel):
+    total_searches: int
+    total_breaches_found: int
+    total_ips_checked: int
+    active_threats: int
+    regions_covered: int
+    last_updated: str
+
 # ============ Helper Functions ============
 
 SOCIAL_PLATFORMS = [
