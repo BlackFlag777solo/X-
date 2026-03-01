@@ -43,6 +43,8 @@ from google_dorks import dorks_router
 from mexico_osint import mexico_router
 # Import Pentesting Lab module
 from pentest_lab import pentest_router
+# Import Cyber Tools module
+from cyber_tools import tools_router
 
 # ============ Models ============
 
@@ -1877,6 +1879,9 @@ app.include_router(mexico_router)
 
 # Include Pentesting Lab router
 app.include_router(pentest_router)
+
+# Include Cyber Tools router
+app.include_router(tools_router)
 
 app.add_middleware(
     CORSMiddleware,
