@@ -278,6 +278,63 @@ export default function App() {
     setLoading(false);
   };
 
+  // Cellular API functions
+  const loadCellularDashboard = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/cellular/dashboard`);
+      setCellularDashboard(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadCellularTools = async () => {
+    try {
+      const search = toolSearch ? `?search=${toolSearch}` : '';
+      const response = await axios.get(`${API_URL}/api/cellular/tools${search}`);
+      setCellularTools(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadCellularHardware = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/cellular/hardware`);
+      setCellularHardware(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadCellularAttacks = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/cellular/attack-vectors`);
+      setCellularAttacks(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const runCellularScan = async () => {
+    setLoading(true);
+    setCellularScan(null);
+    try {
+      const response = await axios.get(`${API_URL}/api/cellular/realtime-scan`);
+      setCellularScan(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const loadCellularMexico = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/cellular/mexico-telecom`);
+      setCellularMexico(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const getSeverityColor = (s: string) => {
+    switch(s) {
+      case 'CRITICAL': return '#ff0040';
+      case 'HIGH': return '#ff6600';
+      case 'MEDIUM': return '#ffcc00';
+      case 'LOW': return '#00ff88';
+      default: return '#888';
+    }
+  };
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
