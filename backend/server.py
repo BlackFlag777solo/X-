@@ -1864,6 +1864,15 @@ app.include_router(cellular_router)
 # Include Real APIs router
 app.include_router(real_router)
 
+# Include Secret Scanner router
+app.include_router(secret_router)
+
+# Include Google Dorks router
+app.include_router(dorks_router)
+
+# Include Mexico OSINT v2 router
+app.include_router(mexico_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
