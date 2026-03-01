@@ -1809,11 +1809,16 @@ export default function App() {
             </TouchableOpacity>
             {weatherResult && (
               <View style={[styles.eyeResultCard, { borderColor: '#ffcc0060' }]}>
-                <Text style={[styles.resultTitle, { color: '#ffcc00' }]}>{weatherResult.city || weatherCity}</Text>
-                {weatherResult.temperature !== undefined && <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{weatherResult.temperature}C</Text>}
-                {weatherResult.description && <Text style={{ color: '#ccc', fontSize: 12 }}>{weatherResult.description}</Text>}
-                {weatherResult.humidity !== undefined && <Text style={{ color: '#888', fontSize: 11 }}>Humedad: {weatherResult.humidity}%</Text>}
-                {weatherResult.wind_speed !== undefined && <Text style={{ color: '#888', fontSize: 11 }}>Viento: {weatherResult.wind_speed} km/h</Text>}
+                <Text style={[styles.resultTitle, { color: '#ffcc00' }]}>{weatherCity}</Text>
+                {weatherResult.current && (
+                  <>
+                    <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{weatherResult.current.temperature_c}°C</Text>
+                    <Text style={{ color: '#888', fontSize: 11 }}>Humedad: {weatherResult.current.humidity}%</Text>
+                    <Text style={{ color: '#888', fontSize: 11 }}>Viento: {weatherResult.current.wind_speed_kmh} km/h</Text>
+                  </>
+                )}
+                {weatherResult.timezone && <Text style={{ color: '#666', fontSize: 10, marginTop: 4 }}>Zona: {weatherResult.timezone}</Text>}
+                <Text style={{ color: '#00ddff', fontSize: 9, marginTop: 4 }}>Datos en vivo - Open-Meteo API</Text>
               </View>
             )}
           </>
