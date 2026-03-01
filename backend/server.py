@@ -153,6 +153,54 @@ class SecurityReport(BaseModel):
     recommendations: List[str]
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+# ============ Defense Tools Models ============
+
+class IPReputationRequest(BaseModel):
+    ip: str
+
+class IPReputationResult(BaseModel):
+    ip: str
+    is_malicious: bool
+    threat_types: List[str]
+    abuse_score: int
+    country: Optional[str] = None
+    isp: Optional[str] = None
+    reports_count: int
+    last_reported: Optional[str] = None
+    recommendations: List[str]
+
+class FirewallRulesRequest(BaseModel):
+    ips: List[str]
+    rule_type: str  # iptables, ufw, windows, pf
+
+class FirewallRule(BaseModel):
+    rule: str
+    description: str
+
+class FirewallRulesResult(BaseModel):
+    rule_type: str
+    rules: List[FirewallRule]
+    total_ips: int
+
+class AbuseReportRequest(BaseModel):
+    attacker_ip: str
+    attack_type: str
+    evidence: List[str]
+    your_info: Optional[str] = None
+
+class AbuseReportResult(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    report_text: str
+    isp_email: Optional[str] = None
+    cert_email: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class ThreatFeedResult(BaseModel):
+    last_updated: str
+    total_threats: int
+    threats: List[dict]
+    categories: dict
+
 # ============ Helper Functions ============
 
 SOCIAL_PLATFORMS = [
