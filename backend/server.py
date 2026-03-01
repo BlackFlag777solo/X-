@@ -41,6 +41,8 @@ from secret_scanner import secret_router
 from google_dorks import dorks_router
 # Import Mexico OSINT v2 module
 from mexico_osint import mexico_router
+# Import Pentesting Lab module
+from pentest_lab import pentest_router
 
 # ============ Models ============
 
@@ -1872,6 +1874,9 @@ app.include_router(dorks_router)
 
 # Include Mexico OSINT v2 router
 app.include_router(mexico_router)
+
+# Include Pentesting Lab router
+app.include_router(pentest_router)
 
 app.add_middleware(
     CORSMiddleware,
