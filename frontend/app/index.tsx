@@ -678,6 +678,317 @@ export default function App() {
     </View>
   );
 
+  const renderCellular = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#00ccff" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="cellphone-wireless" size={22} color="#00ccff" />
+          <Text style={[styles.eyeTitle, { color: '#00ccff' }]}>CELLULAR INTEL</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+
+      {/* Dashboard Stats */}
+      {cellularDashboard && (
+        <View style={[styles.statsBar, { borderColor: '#00ccff40' }]}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#00ccff' }]}>{cellularDashboard.total_tools}</Text>
+            <Text style={[styles.statLabel, { color: '#0088bb' }]}>Tools</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#00ccff' }]}>{cellularDashboard.total_hardware}</Text>
+            <Text style={[styles.statLabel, { color: '#0088bb' }]}>Hardware</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#00ccff' }]}>{cellularDashboard.total_attack_vectors}</Text>
+            <Text style={[styles.statLabel, { color: '#0088bb' }]}>Vectors</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, { color: '#00ccff' }]}>{cellularDashboard.total_research_papers}</Text>
+            <Text style={[styles.statLabel, { color: '#0088bb' }]}>Papers</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Sub tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 40 }}>
+        {([
+          { key: 'dashboard', icon: 'view-dashboard', label: 'DASH' },
+          { key: 'tools', icon: 'tools', label: 'TOOLS' },
+          { key: 'hardware', icon: 'chip', label: 'SDR HW' },
+          { key: 'attacks', icon: 'shield-alert', label: 'VECTORS' },
+          { key: 'scan', icon: 'radar', label: 'SCAN' },
+          { key: 'mexico', icon: 'flag', label: 'MEXICO' },
+        ] as { key: CellularSubTab; icon: string; label: string }[]).map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.cellSubTab, cellularSubTab === tab.key && styles.cellSubTabActive]}
+            onPress={() => setCellularSubTab(tab.key)}
+          >
+            <MaterialCommunityIcons name={tab.icon as any} size={14} color={cellularSubTab === tab.key ? '#000' : '#00ccff'} />
+            <Text style={[styles.cellSubTabText, cellularSubTab === tab.key && { color: '#000' }]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView style={styles.resultsContainer} showsVerticalScrollIndicator={false}>
+        {/* DASHBOARD */}
+        {cellularSubTab === 'dashboard' && cellularDashboard && (
+          <>
+            <Text style={[styles.sectionTitle, { color: '#00ccff' }]}>Severity Distribution</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 14 }}>
+              {Object.entries(cellularDashboard.severity_distribution).map(([sev, count]: [string, any]) => (
+                <View key={sev} style={{ alignItems: 'center' }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: getSeverityColor(sev) + '30', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: getSeverityColor(sev) }}>
+                    <Text style={{ color: getSeverityColor(sev), fontWeight: 'bold', fontSize: 16 }}>{String(count)}</Text>
+                  </View>
+                  <Text style={{ color: '#888', fontSize: 8, marginTop: 4 }}>{sev}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Text style={[styles.sectionTitle, { color: '#00ccff' }]}>Tool Categories</Text>
+            {cellularDashboard.categories?.tools && Object.entries(cellularDashboard.categories.tools).map(([cat, count]: [string, any]) => (
+              <View key={cat} style={styles.cellRow}>
+                <Text style={{ color: '#ccc', fontSize: 12, flex: 1 }}>{cat}</Text>
+                <View style={[styles.cellBadge, { backgroundColor: '#00ccff20' }]}>
+                  <Text style={{ color: '#00ccff', fontSize: 11, fontWeight: 'bold' }}>{String(count)}</Text>
+                </View>
+              </View>
+            ))}
+
+            <Text style={[styles.sectionTitle, { color: '#00ccff', marginTop: 14 }]}>Hardware Manufacturers</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              {cellularDashboard.categories?.hardware_manufacturers?.map((m: string) => (
+                <View key={m} style={[styles.cellTag, { borderColor: '#00ccff40' }]}>
+                  <Text style={{ color: '#00ccff', fontSize: 10 }}>{m}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.cellInfoBox}>
+              <MaterialCommunityIcons name="information" size={16} color="#00ccff" />
+              <Text style={{ color: '#888', fontSize: 10, flex: 1, marginLeft: 8 }}>
+                Based on Awesome-Cellular-Hacking by W00t3k. Educational and defensive use only.
+              </Text>
+            </View>
+          </>
+        )}
+
+        {/* TOOLS */}
+        {cellularSubTab === 'tools' && (
+          <>
+            <View style={[styles.eyeInputContainer, { borderColor: '#00ccff' }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#00ccff" />
+              <TextInput style={styles.eyeInput} placeholder="Search tools..." placeholderTextColor="#666" value={toolSearch} onChangeText={setToolSearch} onSubmitEditing={() => { setCellularTools(null); loadCellularTools(); }} />
+            </View>
+            {cellularTools?.tools?.map((tool: any) => (
+              <View key={tool.id} style={[styles.cellToolCard, { borderLeftColor: tool.risk_level === 'CRITICAL' ? '#ff0040' : tool.risk_level === 'HIGH' ? '#ff6600' : '#00ccff' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{tool.name}</Text>
+                  <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(tool.risk_level) + '30' }]}>
+                    <Text style={{ color: getSeverityColor(tool.risk_level), fontSize: 9, fontWeight: 'bold' }}>{tool.risk_level}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>{tool.category}</Text>
+                <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 6 }}>{tool.description}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                  {tool.tags.slice(0, 4).map((tag: string) => (
+                    <View key={tag} style={[styles.cellTag, { borderColor: '#00ccff30' }]}>
+                      <Text style={{ color: '#00ccff', fontSize: 8 }}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* HARDWARE */}
+        {cellularSubTab === 'hardware' && (
+          <>
+            <Text style={[styles.sectionTitle, { color: '#00ccff' }]}>SDR Hardware Database</Text>
+            {cellularHardware?.hardware?.map((hw: any) => (
+              <View key={hw.id} style={styles.cellHwCard}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{hw.name}</Text>
+                    <Text style={{ color: '#00ccff', fontSize: 10 }}>{hw.manufacturer}</Text>
+                  </View>
+                  <Text style={{ color: '#00ff88', fontSize: 14, fontWeight: 'bold' }}>{hw.price}</Text>
+                </View>
+                <View style={{ marginTop: 6 }}>
+                  <View style={styles.cellHwRow}>
+                    <Text style={styles.cellHwLabel}>Freq:</Text>
+                    <Text style={styles.cellHwValue}>{hw.freq_range}</Text>
+                  </View>
+                  <View style={styles.cellHwRow}>
+                    <Text style={styles.cellHwLabel}>BW:</Text>
+                    <Text style={styles.cellHwValue}>{hw.bandwidth}</Text>
+                  </View>
+                  <View style={styles.cellHwRow}>
+                    <Text style={styles.cellHwLabel}>CH:</Text>
+                    <Text style={styles.cellHwValue}>{hw.channels}</Text>
+                  </View>
+                  <View style={styles.cellHwRow}>
+                    <Text style={styles.cellHwLabel}>Use:</Text>
+                    <Text style={styles.cellHwValue}>{hw.use_case}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#666', fontSize: 9, marginTop: 4, fontStyle: 'italic' }}>{hw.notes}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* ATTACK VECTORS */}
+        {cellularSubTab === 'attacks' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#ff004040' }]}>
+              <MaterialCommunityIcons name="alert" size={16} color="#ff0040" />
+              <Text style={{ color: '#ff6666', fontSize: 10, flex: 1, marginLeft: 8 }}>
+                EDUCATIONAL ONLY - For defensive security research
+              </Text>
+            </View>
+            {cellularAttacks?.vectors?.map((atk: any) => (
+              <View key={atk.id} style={[styles.cellAtkCard, { borderLeftColor: getSeverityColor(atk.severity) }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{atk.name}</Text>
+                  <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(atk.severity) + '30' }]}>
+                    <Text style={{ color: getSeverityColor(atk.severity), fontSize: 9, fontWeight: 'bold' }}>{atk.severity}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10, marginBottom: 2 }}>{atk.category} | {atk.generation.join(', ')}</Text>
+                <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 6 }}>{atk.description}</Text>
+                
+                <Text style={{ color: '#00ff88', fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>Defense:</Text>
+                {atk.defense.slice(0, 3).map((d: string, i: number) => (
+                  <Text key={i} style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>{'\u2022'} {d}</Text>
+                ))}
+                
+                {atk.mexico_relevance && (
+                  <View style={{ marginTop: 6, backgroundColor: '#ff000010', borderRadius: 4, padding: 6 }}>
+                    <Text style={{ color: '#ff6666', fontSize: 9 }}>MX: {atk.mexico_relevance}</Text>
+                  </View>
+                )}
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* CELLULAR SCAN */}
+        {cellularSubTab === 'scan' && (
+          <>
+            <TouchableOpacity style={[styles.eyeButton, { backgroundColor: '#00ccff' }, loading && styles.buttonDisabled]} onPress={runCellularScan} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : (
+                <>
+                  <MaterialCommunityIcons name="radar" size={20} color="#000" />
+                  <Text style={styles.eyeButtonText}>SCAN CELLULAR ENVIRONMENT</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {cellularScan && (
+              <>
+                <View style={[styles.cellScanHeader, { borderColor: cellularScan.threat_level === 'CRITICAL' ? '#ff0040' : cellularScan.threat_level === 'HIGH' ? '#ff6600' : '#00ff88' }]}>
+                  <MaterialCommunityIcons name={cellularScan.suspicious_cells > 0 ? "alert-circle" : "check-circle"} size={32} color={cellularScan.suspicious_cells > 0 ? '#ff0040' : '#00ff88'} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ color: getSeverityColor(cellularScan.threat_level), fontSize: 16, fontWeight: 'bold' }}>
+                      {cellularScan.threat_level}
+                    </Text>
+                    <Text style={{ color: '#888', fontSize: 11 }}>
+                      {cellularScan.cells_found} cells | {cellularScan.suspicious_cells} suspicious
+                    </Text>
+                  </View>
+                </View>
+
+                {cellularScan.cells.map((cell: any, i: number) => (
+                  <View key={i} style={[styles.cellScanItem, cell.suspicious && { borderColor: '#ff004060', backgroundColor: '#1a0a0a' }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <MaterialCommunityIcons name={cell.suspicious ? "alert" : "antenna"} size={16} color={cell.suspicious ? '#ff0040' : '#00ccff'} />
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{cell.technology}</Text>
+                      </View>
+                      <Text style={{ color: '#888', fontSize: 10 }}>{cell.operator}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                      <Text style={{ color: '#666', fontSize: 9 }}>Cell: {cell.cell_id}</Text>
+                      <Text style={{ color: '#666', fontSize: 9 }}>{cell.frequency_mhz} MHz</Text>
+                      <Text style={{ color: cell.signal_dbm > -85 ? '#00ff88' : cell.signal_dbm > -100 ? '#ffcc00' : '#ff4444', fontSize: 9, fontWeight: 'bold' }}>{cell.signal_dbm} dBm</Text>
+                    </View>
+                    {cell.suspicious && (
+                      <Text style={{ color: '#ff4444', fontSize: 9, marginTop: 4, fontStyle: 'italic' }}>{cell.suspicious_reason}</Text>
+                    )}
+                  </View>
+                ))}
+
+                {cellularScan.recommendations.map((rec: string, i: number) => (
+                  <Text key={i} style={{ color: '#888', fontSize: 10, marginTop: 4 }}>{rec}</Text>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* MEXICO TELECOM */}
+        {cellularSubTab === 'mexico' && cellularMexico && (
+          <>
+            <Text style={[styles.sectionTitle, { color: '#00ccff' }]}>Mexican Operators</Text>
+            {cellularMexico.operators.map((op: any, i: number) => (
+              <View key={i} style={styles.cellMxOpCard}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{op.name}</Text>
+                  <Text style={{ color: '#00ccff', fontSize: 12, fontWeight: 'bold' }}>{op.market_share}</Text>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10 }}>{op.subscribers} subscribers</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                  {op.tech.map((t: string) => (
+                    <View key={t} style={[styles.cellTag, { borderColor: t.includes('5G') ? '#00ff88' : '#00ccff30' }]}>
+                      <Text style={{ color: t.includes('5G') ? '#00ff88' : '#00ccff', fontSize: 9 }}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={{ color: '#ff6666', fontSize: 9, marginTop: 4 }}>SS7: {op.ss7_status}</Text>
+              </View>
+            ))}
+
+            <Text style={[styles.sectionTitle, { color: '#00ccff', marginTop: 8 }]}>State Coverage</Text>
+            {Object.entries(cellularMexico.state_coverage).map(([code, data]: [string, any]) => (
+              <View key={code} style={styles.cellMxStateCard}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{code}</Text>
+                  <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(data.risk) + '30' }]}>
+                    <Text style={{ color: getSeverityColor(data.risk), fontSize: 9, fontWeight: 'bold' }}>{data.risk}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={{ color: '#00ccff', fontSize: 10 }}>4G: {data['4g_coverage']}</Text>
+                  <Text style={{ color: data['5g_coverage'] !== '0%' ? '#00ff88' : '#666', fontSize: 10 }}>5G: {data['5g_coverage']}</Text>
+                </View>
+                <Text style={{ color: '#888', fontSize: 9, marginTop: 4 }}>{data.notes}</Text>
+              </View>
+            ))}
+
+            {cellularMexico.cert && (
+              <View style={[styles.cellInfoBox, { borderColor: '#00ccff40', marginTop: 10 }]}>
+                <MaterialCommunityIcons name="shield-check" size={16} color="#00ccff" />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{cellularMexico.cert.name}</Text>
+                  <Text style={{ color: '#888', fontSize: 9 }}>{cellularMexico.cert.email}</Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        <View style={{ height: 30 }} />
+      </ScrollView>
+    </View>
+  );
+
   // Simple render functions for other tabs
   const renderSimpleTab = (title: string, color: string, icon: string, content: React.ReactNode) => (
     <View style={styles.tabContent}>
