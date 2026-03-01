@@ -31,6 +31,8 @@ api_router = APIRouter(prefix="/api")
 
 # Import Mexico module
 from eye_mexico import eye_router
+# Import Cellular Intelligence module
+from cellular_intel import cellular_router
 
 # ============ Models ============
 
