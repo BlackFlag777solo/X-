@@ -87,6 +87,72 @@ class ScanHistory(BaseModel):
     result_summary: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+# ============ Security Intelligence Center Models ============
+
+class CVERequest(BaseModel):
+    cve_id: str
+
+class CVEInfo(BaseModel):
+    cve_id: str
+    description: str
+    severity: str
+    cvss_score: Optional[float] = None
+    published_date: Optional[str] = None
+    references: List[str]
+    affected_products: List[str]
+    exploits_available: bool
+
+class TechDetectRequest(BaseModel):
+    url: str
+
+class DetectedTechnology(BaseModel):
+    name: str
+    category: str
+    version: Optional[str] = None
+    confidence: str
+
+class TechDetectResult(BaseModel):
+    url: str
+    technologies: List[DetectedTechnology]
+    server: Optional[str] = None
+    powered_by: Optional[str] = None
+    cms: Optional[str] = None
+    framework: Optional[str] = None
+
+class DDoSAnalysisRequest(BaseModel):
+    url: str
+
+class DDoSVulnerability(BaseModel):
+    type: str
+    risk_level: str
+    description: str
+    mitigation: str
+
+class DDoSAnalysisResult(BaseModel):
+    url: str
+    overall_risk: str
+    vulnerabilities: List[DDoSVulnerability]
+    recommendations: List[str]
+    protection_detected: bool
+    cdn_detected: Optional[str] = None
+
+class SecurityReportRequest(BaseModel):
+    target: str
+    findings: List[str]
+    severity: str
+    report_type: str  # bug_bounty, pentest, assessment
+
+class SecurityReport(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    target: str
+    report_type: str
+    severity: str
+    findings: List[str]
+    executive_summary: str
+    technical_details: str
+    recommendations: List[str]
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 # ============ Helper Functions ============
 
 SOCIAL_PLATFORMS = [
