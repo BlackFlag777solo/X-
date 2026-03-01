@@ -250,6 +250,22 @@ metadata:
   test_sequence: 1
   run_ui: false
 
+  new_cellular_endpoints:
+    - "GET /api/cellular/dashboard"
+    - "GET /api/cellular/tools"
+    - "GET /api/cellular/tools/{tool_id}"
+    - "GET /api/cellular/hardware"
+    - "GET /api/cellular/attack-vectors"
+    - "GET /api/cellular/attack-vectors/{vector_id}"
+    - "GET /api/cellular/research"
+    - "GET /api/cellular/detection-defense"
+    - "GET /api/cellular/mexico-telecom"
+    - "GET /api/cellular/sim-security"
+    - "GET /api/cellular/ss7-analysis"
+    - "GET /api/cellular/5g-security"
+    - "GET /api/cellular/forensics"
+    - "GET /api/cellular/realtime-scan"
+
 test_plan:
   current_focus: []
   stuck_tasks: []
