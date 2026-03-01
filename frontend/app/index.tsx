@@ -492,7 +492,7 @@ export default function App() {
     setLoading(true);
     setShodanResult(null);
     try {
-      const response = await axios.post(`${API_URL}/api/real/shodan-lookup`, { ip: shodanIp });
+      const response = await axios.post(`${API_URL}/api/real/ip-lookup`, { ip: shodanIp });
       setShodanResult(response.data);
     } catch (error) { console.error(error); }
     setLoading(false);
@@ -525,7 +525,15 @@ export default function App() {
     setLoading(true);
     setWeatherResult(null);
     try {
-      const response = await axios.post(`${API_URL}/api/real/weather`, { city: weatherCity });
+      // Use Mexico City coords as default, or parse city name
+      const cityCoords: Record<string, [number, number]> = {
+        'mexico': [19.43, -99.13], 'guadalajara': [20.66, -103.35], 'monterrey': [25.69, -100.32],
+        'cancun': [21.16, -86.85], 'tijuana': [32.51, -117.04], 'puebla': [19.04, -98.21],
+        'merida': [20.97, -89.59], 'oaxaca': [17.07, -96.73], 'acapulco': [16.85, -99.82],
+      };
+      const key = weatherCity.toLowerCase().split(' ')[0];
+      const coords = cityCoords[key] || [19.43, -99.13];
+      const response = await axios.get(`${API_URL}/api/real/weather/${coords[0]}/${coords[1]}`);
       setWeatherResult(response.data);
     } catch (error) { console.error(error); }
     setLoading(false);
