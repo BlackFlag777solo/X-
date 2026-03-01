@@ -1746,22 +1746,21 @@ export default function App() {
               {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>VERIFICAR BREACH</Text>}
             </TouchableOpacity>
             {realBreachResult && (
-              <View style={[styles.eyeResultCard, { borderColor: realBreachResult.breached ? '#ff000060' : '#00ff0060' }]}>
+              <View style={[styles.eyeResultCard, { borderColor: realBreachResult.found_in_breaches ? '#ff000060' : '#00ff0060' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <MaterialCommunityIcons name={realBreachResult.breached ? 'alert-circle' : 'check-circle'} size={24} color={realBreachResult.breached ? '#ff0000' : '#00ff88'} />
-                  <Text style={{ color: realBreachResult.breached ? '#ff0000' : '#00ff88', fontSize: 16, fontWeight: 'bold' }}>{realBreachResult.breached ? 'COMPROMETIDO' : 'SEGURO'}</Text>
+                  <MaterialCommunityIcons name={realBreachResult.found_in_breaches ? 'alert-circle' : 'check-circle'} size={24} color={realBreachResult.found_in_breaches ? '#ff0000' : '#00ff88'} />
+                  <Text style={{ color: realBreachResult.found_in_breaches ? '#ff0000' : '#00ff88', fontSize: 16, fontWeight: 'bold' }}>{realBreachResult.found_in_breaches ? 'COMPROMETIDO' : 'SEGURO'}</Text>
                 </View>
-                {realBreachResult.breaches && realBreachResult.breaches.length > 0 && (
+                <Text style={{ color: '#888', fontSize: 11, marginTop: 4 }}>Email: {realBreachResult.email}</Text>
+                {realBreachResult.found_in_breaches && (
                   <>
-                    <Text style={{ color: '#ff6666', fontSize: 12, marginTop: 8 }}>{realBreachResult.breaches.length} filtraciones encontradas</Text>
-                    {realBreachResult.breaches.map((b: any, i: number) => (
-                      <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#ff4444' }]}>
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{b.name || b.Name}</Text>
-                        <Text style={{ color: '#888', fontSize: 10 }}>{b.domain || b.Domain} | {b.date || b.BreachDate}</Text>
-                      </View>
-                    ))}
+                    <Text style={{ color: '#ff6666', fontSize: 12, marginTop: 4 }}>Encontrado {realBreachResult.breach_count} veces en filtraciones</Text>
+                    <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(realBreachResult.risk_level) + '30', marginTop: 6 }]}>
+                      <Text style={{ color: getSeverityColor(realBreachResult.risk_level), fontSize: 11, fontWeight: 'bold' }}>Riesgo: {realBreachResult.risk_level}</Text>
+                    </View>
                   </>
                 )}
+                <Text style={{ color: '#888', fontSize: 10, marginTop: 6 }}>{realBreachResult.recommendation}</Text>
               </View>
             )}
           </>
