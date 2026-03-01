@@ -35,6 +35,12 @@ from eye_mexico import eye_router
 from cellular_intel import cellular_router
 # Import Real APIs module
 from real_apis import real_router
+# Import Secret Scanner module
+from secret_scanner import secret_router
+# Import Google Dorks module
+from google_dorks import dorks_router
+# Import Mexico OSINT v2 module
+from mexico_osint import mexico_router
 
 # ============ Models ============
 
