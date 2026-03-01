@@ -12,7 +12,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # API Base URL from frontend environment
-API_BASE_URL = "https://bold-faraday.preview.emergentagent.com/api"
+API_BASE_URL = "https://deep-search-mx.preview.emergentagent.com/api"
 
 class TestResult:
     def __init__(self, name: str, success: bool, details: str = "", data: Any = None):

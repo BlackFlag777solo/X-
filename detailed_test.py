@@ -8,7 +8,7 @@ import httpx
 import json
 from datetime import datetime
 
-API_BASE_URL = "https://bold-faraday.preview.emergentagent.com/api"
+API_BASE_URL = "https://deep-search-mx.preview.emergentagent.com/api"
 
 async def test_edge_cases():
     """Test edge cases and data structure validation"""
