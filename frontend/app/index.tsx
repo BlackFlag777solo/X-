@@ -1221,6 +1221,538 @@ export default function App() {
   );
 
   // Simple render functions for other tabs
+  // ========== SECRET SCANNER RENDER ==========
+  const renderSecrets = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#ff4400" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="key-alert" size={24} color="#ff4400" />
+          <Text style={[styles.eyeTitle, { color: '#ff4400' }]}>SECRET SCANNER</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 36 }}>
+        {([['scanner', 'SCANNER'], ['patterns', 'PATRONES'], ['keyhacks', 'KEYHACKS']] as [SecretsSubTab, string][]).map(([key, label]) => (
+          <TouchableOpacity key={key} style={[styles.cellSubTab, secretsSubTab === key && { backgroundColor: '#ff4400' }]} onPress={() => setSecretsSubTab(key)}>
+            <Text style={[styles.cellSubTabText, { color: secretsSubTab === key ? '#000' : '#ff4400' }]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {secretsSubTab === 'scanner' && (
+          <>
+            <TextInput
+              style={[styles.input, { backgroundColor: '#111', borderWidth: 1, borderColor: '#ff4400', borderRadius: 10, padding: 12, minHeight: 100, textAlignVertical: 'top', marginBottom: 10 }]}
+              placeholder="Pega texto, codigo o config para escanear secretos..."
+              placeholderTextColor="#666"
+              multiline
+              value={secretScanText}
+              onChangeText={setSecretScanText}
+            />
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff4400' }, loading && styles.buttonDisabled]} onPress={scanSecrets} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="radar" size={20} color="#000" /><Text style={styles.scanButtonText}>ESCANEAR SECRETOS</Text></>}
+            </TouchableOpacity>
+            {secretScanResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff440060' }]}>
+                <View style={styles.resultHeader}>
+                  <Text style={[styles.resultTitle, { color: '#ff4400' }]}>Resultado: {secretScanResult.total_secrets_found} secretos</Text>
+                </View>
+                {Object.entries(secretScanResult.risk_summary).map(([risk, count]) => (
+                  (count as number) > 0 && <View key={risk} style={[styles.cellBadge, { backgroundColor: getSeverityColor(risk) + '30', marginBottom: 4 }]}>
+                    <Text style={{ color: getSeverityColor(risk), fontSize: 11, fontWeight: 'bold' }}>{risk}: {count as number}</Text>
+                  </View>
+                ))}
+                {secretScanResult.matches.map((m: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 3, borderLeftColor: getSeverityColor(m.risk_level) }]}>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{m.service}</Text>
+                    <Text style={{ color: getSeverityColor(m.risk_level), fontSize: 10 }}>{m.risk_level} - {m.category}</Text>
+                    <Text style={{ color: '#ff8866', fontSize: 11, fontFamily: 'monospace' }}>{m.matched_value}</Text>
+                    <Text style={{ color: '#888', fontSize: 9, marginTop: 4 }}>Verificar: {m.verification_method}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        {secretsSubTab === 'patterns' && secretPatterns && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#ff440020' }]}>
+              <MaterialCommunityIcons name="database" size={20} color="#ff4400" />
+              <Text style={{ color: '#ff4400', fontSize: 12, marginLeft: 8, fontWeight: 'bold' }}>{secretPatterns.total_patterns} patrones de deteccion</Text>
+            </View>
+            {Object.entries(secretPatterns.categories).map(([cat, patterns]) => (
+              <View key={cat} style={{ marginTop: 12 }}>
+                <Text style={[styles.sectionTitle, { color: '#ff4400' }]}>{cat}</Text>
+                {(patterns as any[]).map((p: any, i: number) => (
+                  <View key={i} style={[styles.cellToolCard, { borderLeftColor: getSeverityColor(p.risk) }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', flex: 1 }}>{p.service}</Text>
+                      <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(p.risk) + '30' }]}>
+                        <Text style={{ color: getSeverityColor(p.risk), fontSize: 9, fontWeight: 'bold' }}>{p.risk}</Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: '#888', fontSize: 9, marginTop: 4 }}>{p.verify}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </>
+        )}
+        {secretsSubTab === 'keyhacks' && keyhacksData && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#ff440020' }]}>
+              <MaterialCommunityIcons name="key-chain" size={20} color="#ff4400" />
+              <Text style={{ color: '#ff4400', fontSize: 12, marginLeft: 8, fontWeight: 'bold' }}>{keyhacksData.total_services} servicios - Verificacion de API keys</Text>
+            </View>
+            {keyhacksData.keyhacks.map((k: any, i: number) => (
+              <View key={i} style={[styles.cellToolCard, { borderLeftColor: '#ff4400' }]}>
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{k.service}</Text>
+                <Text style={{ color: '#ff8866', fontSize: 10, fontFamily: 'monospace', marginTop: 4 }}>{k.verify_cmd}</Text>
+                <Text style={{ color: '#888', fontSize: 9, marginTop: 2 }}>Exito: {k.success_indicator}</Text>
+              </View>
+            ))}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
+  // ========== GOOGLE DORKS RENDER ==========
+  const renderDorks = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#ffaa00" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="google" size={24} color="#ffaa00" />
+          <Text style={[styles.eyeTitle, { color: '#ffaa00' }]}>GOOGLE DORKS</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 36 }}>
+        {([['database', 'BASE DATOS'], ['operators', 'OPERADORES'], ['builder', 'CONSTRUCTOR']] as [DorksSubTab, string][]).map(([key, label]) => (
+          <TouchableOpacity key={key} style={[styles.cellSubTab, dorksSubTab === key && { backgroundColor: '#ffaa00' }]} onPress={() => setDorksSubTab(key)}>
+            <Text style={[styles.cellSubTabText, { color: dorksSubTab === key ? '#000' : '#ffaa00' }]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {dorksSubTab === 'database' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ffaa00' }]}>
+              <MaterialCommunityIcons name="magnify" size={20} color="#ffaa00" />
+              <TextInput style={styles.input} placeholder="Buscar dorks..." placeholderTextColor="#666" value={dorkSearchFilter} onChangeText={setDorkSearchFilter} onSubmitEditing={loadDorksDatabase} />
+            </View>
+            {dorksData && (
+              <>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8, maxHeight: 30 }}>
+                  <TouchableOpacity onPress={() => { setDorkCategoryFilter(''); }} style={[styles.cellTag, { borderColor: !dorkCategoryFilter ? '#ffaa00' : '#333' }]}>
+                    <Text style={{ color: !dorkCategoryFilter ? '#ffaa00' : '#666', fontSize: 9 }}>Todos ({dorksData.total_dorks})</Text>
+                  </TouchableOpacity>
+                  {Object.entries(dorksData.categories).map(([cat, count]) => (
+                    <TouchableOpacity key={cat} onPress={() => setDorkCategoryFilter(cat)} style={[styles.cellTag, { borderColor: dorkCategoryFilter === cat ? '#ffaa00' : '#333', marginLeft: 4 }]}>
+                      <Text style={{ color: dorkCategoryFilter === cat ? '#ffaa00' : '#666', fontSize: 9 }}>{cat} ({count as number})</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                {dorksData.dorks.map((d: any, i: number) => (
+                  <View key={i} style={[styles.cellToolCard, { borderLeftColor: getSeverityColor(d.risk) }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: '#888', fontSize: 9 }}>{d.id} - {d.category}</Text>
+                      <View style={[styles.cellBadge, { backgroundColor: getSeverityColor(d.risk) + '30' }]}>
+                        <Text style={{ color: getSeverityColor(d.risk), fontSize: 8, fontWeight: 'bold' }}>{d.risk}</Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: '#ffcc44', fontSize: 11, fontFamily: 'monospace', marginTop: 4 }}>{d.dork}</Text>
+                    <Text style={{ color: '#aaa', fontSize: 10, marginTop: 2 }}>{d.description}</Text>
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+        {dorksSubTab === 'operators' && dorksOperators && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#ffaa0020' }]}>
+              <MaterialCommunityIcons name="code-tags" size={20} color="#ffaa00" />
+              <Text style={{ color: '#ffaa00', fontSize: 12, marginLeft: 8, fontWeight: 'bold' }}>{dorksOperators.total_operators} operadores avanzados</Text>
+            </View>
+            {dorksOperators.operators.map((op: any, i: number) => (
+              <View key={i} style={[styles.cellToolCard, { borderLeftColor: '#ffaa00' }]}>
+                <Text style={{ color: '#ffcc44', fontSize: 14, fontWeight: 'bold', fontFamily: 'monospace' }}>{op.operator}</Text>
+                <Text style={{ color: '#ccc', fontSize: 11, marginTop: 2 }}>{op.description}</Text>
+                <Text style={{ color: '#888', fontSize: 10, marginTop: 2 }}>Sintaxis: {op.syntax}</Text>
+                <Text style={{ color: '#ffaa00', fontSize: 10, fontFamily: 'monospace', marginTop: 2 }}>Ej: {op.example}</Text>
+              </View>
+            ))}
+          </>
+        )}
+        {dorksSubTab === 'builder' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ffaa00' }]}>
+              <MaterialCommunityIcons name="target" size={20} color="#ffaa00" />
+              <TextInput style={styles.input} placeholder="Dominio objetivo (ej: example.com)" placeholderTextColor="#666" value={dorkTarget} onChangeText={setDorkTarget} />
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8, maxHeight: 30 }}>
+              {['general', 'files', 'credentials', 'infrastructure', 'mexico'].map(t => (
+                <TouchableOpacity key={t} onPress={() => setDorkType(t)} style={[styles.cellTag, { borderColor: dorkType === t ? '#ffaa00' : '#333', marginRight: 4 }]}>
+                  <Text style={{ color: dorkType === t ? '#ffaa00' : '#666', fontSize: 10, textTransform: 'uppercase' }}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ffaa00' }, loading && styles.buttonDisabled]} onPress={buildDork} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="hammer-wrench" size={20} color="#000" /><Text style={styles.scanButtonText}>CONSTRUIR DORKS</Text></>}
+            </TouchableOpacity>
+            {dorkBuilderResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ffaa0060' }]}>
+                <Text style={[styles.resultTitle, { color: '#ffaa00' }]}>Dorks para: {dorkBuilderResult.target}</Text>
+                <Text style={{ color: '#888', fontSize: 10, marginBottom: 8 }}>Tipo: {dorkBuilderResult.dork_type}</Text>
+                {dorkBuilderResult.generated_dorks.map((d: string, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#ffaa00' }]}>
+                    <Text style={{ color: '#ffcc44', fontSize: 11, fontFamily: 'monospace' }}>{d}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
+  // ========== MEXICO OSINT v2 RENDER ==========
+  const renderMexOsint = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#00cc66" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="map-marker-radius" size={24} color="#00cc66" />
+          <Text style={[styles.eyeTitle, { color: '#00cc66' }]}>MEXICO OSINT v2</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 36 }}>
+        {([['dashboard', 'PANEL'], ['states', 'ESTADOS'], ['cities', 'CIUDADES'], ['zipcode', 'C.P.'], ['curp', 'CURP'], ['telecom', 'TELECOM']] as [MexSubTab, string][]).map(([key, label]) => (
+          <TouchableOpacity key={key} style={[styles.cellSubTab, mexSubTab === key && { backgroundColor: '#00cc66' }]} onPress={() => setMexSubTab(key)}>
+            <Text style={[styles.cellSubTabText, { color: mexSubTab === key ? '#000' : '#00cc66' }]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {mexSubTab === 'dashboard' && mexDashboard && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00cc6620' }]}>
+              <MaterialCommunityIcons name="flag" size={24} color="#00cc66" />
+              <View style={{ marginLeft: 10 }}>
+                <Text style={{ color: '#00cc66', fontSize: 14, fontWeight: 'bold' }}>Mexico OSINT v2</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>Datos completos de la Republica Mexicana</Text>
+              </View>
+            </View>
+            {Object.entries(mexDashboard.available_data).map(([key, val]) => (
+              <View key={key} style={[styles.cellRow, { borderBottomColor: '#1a1a1a' }]}>
+                <Text style={{ color: '#ccc', fontSize: 12, textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</Text>
+                <Text style={{ color: '#00cc66', fontSize: 14, fontWeight: 'bold' }}>{val as number}</Text>
+              </View>
+            ))}
+            {mexDashboard.tools.map((t: any, i: number) => (
+              <View key={i} style={[styles.cellToolCard, { borderLeftColor: '#00cc66' }]}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{t.name}</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>{t.description}</Text>
+              </View>
+            ))}
+          </>
+        )}
+        {mexSubTab === 'states' && mexStates && (
+          <>
+            <Text style={{ color: '#00cc66', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>{mexStates.total_states} Estados</Text>
+            {mexStates.states.map((s: any, i: number) => (
+              <View key={i} style={[styles.cellMxStateCard, { borderColor: '#00cc6620' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{s.name}</Text>
+                  <Text style={{ color: '#00cc66', fontSize: 10, fontWeight: 'bold' }}>{s.code}</Text>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10 }}>Capital: {s.capital} | Region: {s.region}</Text>
+                <Text style={{ color: '#666', fontSize: 10 }}>Poblacion: {(s.population).toLocaleString()} | Area: {s.area_km2.toLocaleString()} km2 | LADA: {s.phone_code}</Text>
+              </View>
+            ))}
+          </>
+        )}
+        {mexSubTab === 'cities' && mexCities && (
+          <>
+            <Text style={{ color: '#00cc66', fontSize: 12, fontWeight: 'bold', marginBottom: 8 }}>{mexCities.total_cities} Ciudades Principales</Text>
+            {mexCities.cities.map((c: any, i: number) => (
+              <View key={i} style={[styles.cellMxStateCard, { borderColor: '#00cc6620' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{c.name}</Text>
+                  <View style={[styles.cellTag, { borderColor: '#00cc66' }]}>
+                    <Text style={{ color: '#00cc66', fontSize: 8 }}>{c.type}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10 }}>Estado: {c.state} | Pob: {c.population.toLocaleString()}</Text>
+                <Text style={{ color: '#666', fontSize: 10 }}>Coords: {c.lat}, {c.lon} | Elevacion: {c.elevation_m}m</Text>
+              </View>
+            ))}
+          </>
+        )}
+        {mexSubTab === 'zipcode' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#00cc66' }]}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#00cc66" />
+              <TextInput style={styles.input} placeholder="Codigo Postal (ej: 06600)" placeholderTextColor="#666" value={mexZipInput} onChangeText={setMexZipInput} keyboardType="numeric" />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00cc66' }, loading && styles.buttonDisabled]} onPress={lookupMexZip} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>BUSCAR C.P.</Text>}
+            </TouchableOpacity>
+            {mexZipResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#00cc6660' }]}>
+                <Text style={[styles.resultTitle, { color: '#00cc66' }]}>CP {mexZipResult.zip_code}</Text>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginTop: 4 }}>{mexZipResult.state.name}</Text>
+                <Text style={{ color: '#888', fontSize: 11 }}>Capital: {mexZipResult.state.capital} | Region: {mexZipResult.state.region}</Text>
+                <Text style={{ color: '#666', fontSize: 10 }}>Rango CP del estado: {mexZipResult.zip_range.min} - {mexZipResult.zip_range.max}</Text>
+                {mexZipResult.nearby_cities.length > 0 && (
+                  <>
+                    <Text style={{ color: '#00cc66', fontSize: 11, fontWeight: 'bold', marginTop: 8 }}>Ciudades cercanas:</Text>
+                    {mexZipResult.nearby_cities.map((c: any, i: number) => (
+                      <Text key={i} style={{ color: '#ccc', fontSize: 10 }}>{c.name} (Pob: {c.population.toLocaleString()})</Text>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        )}
+        {mexSubTab === 'curp' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#00cc66' }]}>
+              <MaterialCommunityIcons name="card-account-details" size={20} color="#00cc66" />
+              <TextInput style={styles.input} placeholder="CURP (18 caracteres)" placeholderTextColor="#666" value={mexCurpInput} onChangeText={setMexCurpInput} autoCapitalize="characters" maxLength={18} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00cc66' }, loading && styles.buttonDisabled]} onPress={validateCurp} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>VALIDAR CURP</Text>}
+            </TouchableOpacity>
+            {mexCurpResult && (
+              <View style={[styles.eyeResultCard, { borderColor: mexCurpResult.valid ? '#00cc6660' : '#ff000060' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <MaterialCommunityIcons name={mexCurpResult.valid ? 'check-circle' : 'close-circle'} size={24} color={mexCurpResult.valid ? '#00cc66' : '#ff0000'} />
+                  <Text style={{ color: mexCurpResult.valid ? '#00cc66' : '#ff0000', fontSize: 16, fontWeight: 'bold' }}>{mexCurpResult.valid ? 'VALIDO' : 'INVALIDO'}</Text>
+                </View>
+                {mexCurpResult.valid && mexCurpResult.decoded && (
+                  <>
+                    <View style={styles.cellRow}><Text style={{ color: '#888', fontSize: 11 }}>Iniciales</Text><Text style={{ color: '#fff', fontSize: 12 }}>{mexCurpResult.decoded.initials}</Text></View>
+                    <View style={styles.cellRow}><Text style={{ color: '#888', fontSize: 11 }}>Fecha Nacimiento</Text><Text style={{ color: '#fff', fontSize: 12 }}>{mexCurpResult.decoded.birth_date}</Text></View>
+                    <View style={styles.cellRow}><Text style={{ color: '#888', fontSize: 11 }}>Sexo</Text><Text style={{ color: '#fff', fontSize: 12 }}>{mexCurpResult.decoded.sex}</Text></View>
+                    <View style={styles.cellRow}><Text style={{ color: '#888', fontSize: 11 }}>Estado</Text><Text style={{ color: '#fff', fontSize: 12 }}>{mexCurpResult.decoded.state_of_birth}</Text></View>
+                  </>
+                )}
+                {mexCurpResult.error && <Text style={{ color: '#ff4444', fontSize: 11 }}>{mexCurpResult.error}</Text>}
+              </View>
+            )}
+          </>
+        )}
+        {mexSubTab === 'telecom' && mexTelecom && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00cc6620' }]}>
+              <MaterialCommunityIcons name="cellphone" size={20} color="#00cc66" />
+              <Text style={{ color: '#00cc66', fontSize: 12, marginLeft: 8, fontWeight: 'bold' }}>{mexTelecom.total_operators} operadores | Codigo: {mexTelecom.phone_format.country_code}</Text>
+            </View>
+            {mexTelecom.operators.map((op: any, i: number) => (
+              <View key={i} style={[styles.cellMxOpCard, { borderColor: '#00cc6620' }]}>
+                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{op.name}</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>Tipo: {op.type} | Mercado: {op.market_share}</Text>
+                <Text style={{ color: '#666', fontSize: 10 }}>Tech: {op.technology} | Cobertura: {op.coverage}</Text>
+              </View>
+            ))}
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ color: '#00cc66', fontSize: 12, fontWeight: 'bold', marginBottom: 6 }}>Codigos LADA</Text>
+              {Object.entries(mexTelecom.phone_format.lada_codes).slice(0, 15).map(([code, state]) => (
+                <View key={code} style={styles.cellRow}>
+                  <Text style={{ color: '#00cc66', fontSize: 11, fontWeight: 'bold' }}>{code}</Text>
+                  <Text style={{ color: '#ccc', fontSize: 11 }}>{state as string}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
+  // ========== REAL APIs RENDER ==========
+  const renderRealApis = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#00ddff" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="api" size={24} color="#00ddff" />
+          <Text style={[styles.eyeTitle, { color: '#00ddff' }]}>APIS REALES</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 36 }}>
+        {([['shodan', 'SHODAN'], ['breach', 'BREACH'], ['ssl', 'SSL/TLS'], ['weather', 'CLIMA'], ['safebrowsing', 'SAFE BROWSE']] as [RealSubTab, string][]).map(([key, label]) => (
+          <TouchableOpacity key={key} style={[styles.cellSubTab, realSubTab === key && { backgroundColor: '#00ddff' }]} onPress={() => setRealSubTab(key)}>
+            <Text style={[styles.cellSubTabText, { color: realSubTab === key ? '#000' : '#00ddff' }]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {realSubTab === 'shodan' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00ddff20', marginBottom: 10 }]}>
+              <MaterialCommunityIcons name="server-network" size={20} color="#00ddff" />
+              <Text style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>Shodan InternetDB - Datos reales de IPs expuestas</Text>
+            </View>
+            <View style={[styles.inputContainer, { borderColor: '#00ddff' }]}>
+              <MaterialCommunityIcons name="ip-network" size={20} color="#00ddff" />
+              <TextInput style={styles.input} placeholder="IP Address (ej: 8.8.8.8)" placeholderTextColor="#666" value={shodanIp} onChangeText={setShodanIp} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00ddff' }, loading && styles.buttonDisabled]} onPress={shodanLookup} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="magnify" size={20} color="#000" /><Text style={styles.scanButtonText}>BUSCAR EN SHODAN</Text></>}
+            </TouchableOpacity>
+            {shodanResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#00ddff60' }]}>
+                <Text style={[styles.resultTitle, { color: '#00ddff' }]}>IP: {shodanResult.ip || shodanIp}</Text>
+                {shodanResult.ports && <Text style={{ color: '#ccc', fontSize: 11 }}>Puertos: {shodanResult.ports.join(', ')}</Text>}
+                {shodanResult.hostnames && <Text style={{ color: '#888', fontSize: 10 }}>Hostnames: {shodanResult.hostnames.join(', ')}</Text>}
+                {shodanResult.vulns && shodanResult.vulns.length > 0 && (
+                  <>
+                    <Text style={{ color: '#ff4444', fontSize: 11, fontWeight: 'bold', marginTop: 6 }}>Vulnerabilidades:</Text>
+                    {shodanResult.vulns.map((v: string, i: number) => (
+                      <Text key={i} style={{ color: '#ff6666', fontSize: 10 }}>{v}</Text>
+                    ))}
+                  </>
+                )}
+                {shodanResult.cpes && <Text style={{ color: '#666', fontSize: 10, marginTop: 4 }}>CPEs: {shodanResult.cpes.join(', ')}</Text>}
+              </View>
+            )}
+          </>
+        )}
+        {realSubTab === 'breach' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00ddff20', marginBottom: 10 }]}>
+              <MaterialCommunityIcons name="shield-alert" size={20} color="#ff4444" />
+              <Text style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>HaveIBeenPwned - Verificar filtraciones reales</Text>
+            </View>
+            <View style={[styles.inputContainer, { borderColor: '#ff4444' }]}>
+              <MaterialCommunityIcons name="email" size={20} color="#ff4444" />
+              <TextInput style={styles.input} placeholder="Email para verificar..." placeholderTextColor="#666" value={realBreachEmail} onChangeText={setRealBreachEmail} keyboardType="email-address" />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff4444' }, loading && styles.buttonDisabled]} onPress={realBreachCheck} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>VERIFICAR BREACH</Text>}
+            </TouchableOpacity>
+            {realBreachResult && (
+              <View style={[styles.eyeResultCard, { borderColor: realBreachResult.breached ? '#ff000060' : '#00ff0060' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <MaterialCommunityIcons name={realBreachResult.breached ? 'alert-circle' : 'check-circle'} size={24} color={realBreachResult.breached ? '#ff0000' : '#00ff88'} />
+                  <Text style={{ color: realBreachResult.breached ? '#ff0000' : '#00ff88', fontSize: 16, fontWeight: 'bold' }}>{realBreachResult.breached ? 'COMPROMETIDO' : 'SEGURO'}</Text>
+                </View>
+                {realBreachResult.breaches && realBreachResult.breaches.length > 0 && (
+                  <>
+                    <Text style={{ color: '#ff6666', fontSize: 12, marginTop: 8 }}>{realBreachResult.breaches.length} filtraciones encontradas</Text>
+                    {realBreachResult.breaches.map((b: any, i: number) => (
+                      <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#ff4444' }]}>
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{b.name || b.Name}</Text>
+                        <Text style={{ color: '#888', fontSize: 10 }}>{b.domain || b.Domain} | {b.date || b.BreachDate}</Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        )}
+        {realSubTab === 'ssl' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00ddff20', marginBottom: 10 }]}>
+              <MaterialCommunityIcons name="lock" size={20} color="#00cc66" />
+              <Text style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>Verificar certificado SSL/TLS de un dominio</Text>
+            </View>
+            <View style={[styles.inputContainer, { borderColor: '#00cc66' }]}>
+              <MaterialCommunityIcons name="web" size={20} color="#00cc66" />
+              <TextInput style={styles.input} placeholder="Dominio (ej: google.com)" placeholderTextColor="#666" value={sslDomain} onChangeText={setSslDomain} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#00cc66' }, loading && styles.buttonDisabled]} onPress={checkSSL} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>VERIFICAR SSL</Text>}
+            </TouchableOpacity>
+            {sslResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#00cc6660' }]}>
+                <Text style={[styles.resultTitle, { color: '#00cc66' }]}>SSL: {sslResult.domain || sslDomain}</Text>
+                {sslResult.issuer && <Text style={{ color: '#ccc', fontSize: 11 }}>Emisor: {typeof sslResult.issuer === 'string' ? sslResult.issuer : JSON.stringify(sslResult.issuer)}</Text>}
+                {sslResult.valid_until && <Text style={{ color: '#888', fontSize: 10 }}>Valido hasta: {sslResult.valid_until}</Text>}
+                {sslResult.protocol && <Text style={{ color: '#666', fontSize: 10 }}>Protocolo: {sslResult.protocol}</Text>}
+                {sslResult.valid !== undefined && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    <MaterialCommunityIcons name={sslResult.valid ? 'check-circle' : 'close-circle'} size={18} color={sslResult.valid ? '#00cc66' : '#ff0000'} />
+                    <Text style={{ color: sslResult.valid ? '#00cc66' : '#ff0000', fontSize: 12, fontWeight: 'bold' }}>{sslResult.valid ? 'VALIDO' : 'INVALIDO'}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </>
+        )}
+        {realSubTab === 'weather' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00ddff20', marginBottom: 10 }]}>
+              <MaterialCommunityIcons name="weather-partly-cloudy" size={20} color="#ffcc00" />
+              <Text style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>API meteorologica en tiempo real</Text>
+            </View>
+            <View style={[styles.inputContainer, { borderColor: '#ffcc00' }]}>
+              <MaterialCommunityIcons name="city" size={20} color="#ffcc00" />
+              <TextInput style={styles.input} placeholder="Ciudad (ej: Mexico City)" placeholderTextColor="#666" value={weatherCity} onChangeText={setWeatherCity} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ffcc00' }, loading && styles.buttonDisabled]} onPress={checkWeather} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>CONSULTAR CLIMA</Text>}
+            </TouchableOpacity>
+            {weatherResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ffcc0060' }]}>
+                <Text style={[styles.resultTitle, { color: '#ffcc00' }]}>{weatherResult.city || weatherCity}</Text>
+                {weatherResult.temperature !== undefined && <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{weatherResult.temperature}C</Text>}
+                {weatherResult.description && <Text style={{ color: '#ccc', fontSize: 12 }}>{weatherResult.description}</Text>}
+                {weatherResult.humidity !== undefined && <Text style={{ color: '#888', fontSize: 11 }}>Humedad: {weatherResult.humidity}%</Text>}
+                {weatherResult.wind_speed !== undefined && <Text style={{ color: '#888', fontSize: 11 }}>Viento: {weatherResult.wind_speed} km/h</Text>}
+              </View>
+            )}
+          </>
+        )}
+        {realSubTab === 'safebrowsing' && (
+          <>
+            <View style={[styles.cellInfoBox, { borderColor: '#00ddff20', marginBottom: 10 }]}>
+              <MaterialCommunityIcons name="google" size={20} color="#4285f4" />
+              <Text style={{ color: '#888', fontSize: 10, marginLeft: 8 }}>Google Safe Browsing - Detectar URLs maliciosas</Text>
+            </View>
+            <View style={[styles.inputContainer, { borderColor: '#4285f4' }]}>
+              <MaterialCommunityIcons name="link-lock" size={20} color="#4285f4" />
+              <TextInput style={styles.input} placeholder="URL a verificar..." placeholderTextColor="#666" value={safeBrowsingUrl} onChangeText={setSafeBrowsingUrl} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#4285f4' }, loading && styles.buttonDisabled]} onPress={checkSafeBrowsing} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>VERIFICAR URL</Text>}
+            </TouchableOpacity>
+            {safeBrowsingResult && (
+              <View style={[styles.eyeResultCard, { borderColor: safeBrowsingResult.safe ? '#00ff0060' : '#ff000060' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <MaterialCommunityIcons name={safeBrowsingResult.safe ? 'check-circle' : 'alert-circle'} size={24} color={safeBrowsingResult.safe ? '#00ff88' : '#ff0000'} />
+                  <Text style={{ color: safeBrowsingResult.safe ? '#00ff88' : '#ff0000', fontSize: 16, fontWeight: 'bold' }}>{safeBrowsingResult.status || (safeBrowsingResult.safe ? 'SEGURO' : 'PELIGROSO')}</Text>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10, marginTop: 4 }}>URL: {safeBrowsingResult.url}</Text>
+                {safeBrowsingResult.checked_against && (
+                  <Text style={{ color: '#666', fontSize: 9, marginTop: 4 }}>Verificado contra: {safeBrowsingResult.checked_against.join(', ')}</Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
   const renderSimpleTab = (title: string, color: string, icon: string, content: React.ReactNode) => (
     <View style={styles.tabContent}>
       <View style={styles.header}>
