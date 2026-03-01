@@ -482,6 +482,416 @@ async def clear_chat_history(session_id: str):
     await db.chat_messages.delete_many({"session_id": session_id})
     return {"message": "Chat history cleared"}
 
+# ============ Security Intelligence Center Routes ============
+
+# Technology fingerprints for detection
+TECH_SIGNATURES = {
+    "WordPress": {"headers": ["x-powered-by"], "patterns": ["wp-content", "wp-includes", "wordpress"]},
+    "React": {"patterns": ["react", "_reactRoot", "data-reactroot"]},
+    "Vue.js": {"patterns": ["vue", "__vue__", "data-v-"]},
+    "Angular": {"patterns": ["ng-", "angular", "ng-app"]},
+    "Django": {"headers": ["x-frame-options"], "patterns": ["csrfmiddlewaretoken", "django"]},
+    "Laravel": {"patterns": ["laravel", "csrf-token"], "cookies": ["laravel_session"]},
+    "Express.js": {"headers": ["x-powered-by"], "patterns": ["express"]},
+    "Nginx": {"headers": ["server"], "patterns": ["nginx"]},
+    "Apache": {"headers": ["server"], "patterns": ["apache"]},
+    "Cloudflare": {"headers": ["cf-ray", "cf-cache-status"], "patterns": ["cloudflare"]},
+    "AWS": {"headers": ["x-amz-"], "patterns": ["amazonaws", "aws"]},
+    "jQuery": {"patterns": ["jquery", "$.ajax"]},
+    "Bootstrap": {"patterns": ["bootstrap", "btn-primary", "container-fluid"]},
+    "Tailwind": {"patterns": ["tailwind", "tw-"]},
+}
+
+# CVE Intelligence
+@api_router.post("/intel/cve", response_model=CVEInfo)
+async def get_cve_info(request: CVERequest):
+    """Get detailed CVE information"""
+    cve_id = request.cve_id.upper().strip()
+    
+    if not cve_id.startswith("CVE-"):
+        raise HTTPException(status_code=400, detail="Invalid CVE format. Use CVE-YYYY-NNNNN")
+    
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Use NVD API
+            response = await client.get(
+                f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}",
+                headers={"User-Agent": "X=π Security Scanner"}
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=404, detail=f"CVE {cve_id} not found")
+            
+            data = response.json()
+            
+            if not data.get("vulnerabilities"):
+                raise HTTPException(status_code=404, detail=f"CVE {cve_id} not found")
+            
+            vuln = data["vulnerabilities"][0]["cve"]
+            
+            # Extract description
+            descriptions = vuln.get("descriptions", [])
+            description = next((d["value"] for d in descriptions if d["lang"] == "en"), "No description available")
+            
+            # Extract CVSS score
+            metrics = vuln.get("metrics", {})
+            cvss_score = None
+            severity = "Unknown"
+            
+            if "cvssMetricV31" in metrics:
+                cvss_data = metrics["cvssMetricV31"][0]["cvssData"]
+                cvss_score = cvss_data.get("baseScore")
+                severity = cvss_data.get("baseSeverity", "Unknown")
+            elif "cvssMetricV2" in metrics:
+                cvss_data = metrics["cvssMetricV2"][0]["cvssData"]
+                cvss_score = cvss_data.get("baseScore")
+                severity = "HIGH" if cvss_score and cvss_score >= 7.0 else "MEDIUM" if cvss_score and cvss_score >= 4.0 else "LOW"
+            
+            # Extract references
+            references = [ref.get("url", "") for ref in vuln.get("references", [])[:10]]
+            
+            # Extract affected products
+            affected = []
+            for config in vuln.get("configurations", []):
+                for node in config.get("nodes", []):
+                    for cpe in node.get("cpeMatch", []):
+                        if cpe.get("vulnerable"):
+                            criteria = cpe.get("criteria", "")
+                            parts = criteria.split(":")
+                            if len(parts) >= 5:
+                                affected.append(f"{parts[3]} {parts[4]}")
+            
+            # Check if exploits are available (simplified check)
+            exploits_available = any("exploit" in ref.lower() for ref in references)
+            
+            # Save to history
+            history = ScanHistory(
+                scan_type="CVE Lookup",
+                target=cve_id,
+                result_summary=f"Severity: {severity}, CVSS: {cvss_score}"
+            )
+            await db.scan_history.insert_one(history.dict())
+            
+            return CVEInfo(
+                cve_id=cve_id,
+                description=description[:500],
+                severity=severity,
+                cvss_score=cvss_score,
+                published_date=vuln.get("published", "Unknown"),
+                references=references[:5],
+                affected_products=affected[:10],
+                exploits_available=exploits_available
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching CVE: {str(e)}")
+
+# Technology Detection
+@api_router.post("/intel/techdetect", response_model=TechDetectResult)
+async def detect_technologies(request: TechDetectRequest):
+    """Detect technologies used by a website"""
+    url = request.url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    
+    if not url.startswith("http"):
+        url = "https://" + url
+    
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
+            
+            html = response.text.lower()
+            headers = {k.lower(): v.lower() for k, v in response.headers.items()}
+            
+            technologies = []
+            
+            # Check server
+            server = headers.get("server", None)
+            powered_by = headers.get("x-powered-by", None)
+            
+            # Detect technologies
+            for tech_name, signatures in TECH_SIGNATURES.items():
+                detected = False
+                confidence = "low"
+                version = None
+                
+                # Check headers
+                if "headers" in signatures:
+                    for header in signatures["headers"]:
+                        if header in headers:
+                            if tech_name.lower() in headers[header]:
+                                detected = True
+                                confidence = "high"
+                
+                # Check patterns in HTML
+                if "patterns" in signatures:
+                    matches = sum(1 for pattern in signatures["patterns"] if pattern in html)
+                    if matches >= 2:
+                        detected = True
+                        confidence = "high"
+                    elif matches == 1:
+                        detected = True
+                        confidence = "medium"
+                
+                if detected:
+                    category = "Server" if tech_name in ["Nginx", "Apache"] else \
+                               "CDN" if tech_name == "Cloudflare" else \
+                               "Cloud" if tech_name == "AWS" else \
+                               "CMS" if tech_name == "WordPress" else \
+                               "Framework"
+                    
+                    technologies.append(DetectedTechnology(
+                        name=tech_name,
+                        category=category,
+                        version=version,
+                        confidence=confidence
+                    ))
+            
+            # Detect CMS
+            cms = None
+            if "wordpress" in html or "wp-content" in html:
+                cms = "WordPress"
+            elif "drupal" in html:
+                cms = "Drupal"
+            elif "joomla" in html:
+                cms = "Joomla"
+            elif "shopify" in html:
+                cms = "Shopify"
+            
+            # Detect framework
+            framework = None
+            if "react" in html or "_reactroot" in html:
+                framework = "React"
+            elif "vue" in html or "__vue__" in html:
+                framework = "Vue.js"
+            elif "angular" in html or "ng-" in html:
+                framework = "Angular"
+            
+            # Save to history
+            history = ScanHistory(
+                scan_type="Tech Detection",
+                target=url,
+                result_summary=f"Found {len(technologies)} technologies"
+            )
+            await db.scan_history.insert_one(history.dict())
+            
+            return TechDetectResult(
+                url=url,
+                technologies=technologies,
+                server=server,
+                powered_by=powered_by,
+                cms=cms,
+                framework=framework
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not analyze: {str(e)}")
+
+# DDoS Defense Analysis
+@api_router.post("/intel/ddos-analysis", response_model=DDoSAnalysisResult)
+async def analyze_ddos_defense(request: DDoSAnalysisRequest):
+    """Analyze DDoS protection and vulnerabilities (DEFENSIVE)"""
+    url = request.url.strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    
+    if not url.startswith("http"):
+        url = "https://" + url
+    
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            response = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            
+            headers = {k.lower(): v for k, v in response.headers.items()}
+            
+            vulnerabilities = []
+            recommendations = []
+            
+            # Check for CDN/DDoS protection
+            cdn_detected = None
+            protection_detected = False
+            
+            if "cf-ray" in headers or "cf-cache-status" in headers:
+                cdn_detected = "Cloudflare"
+                protection_detected = True
+            elif "x-akamai" in str(headers) or "akamai" in str(headers):
+                cdn_detected = "Akamai"
+                protection_detected = True
+            elif "x-amz-cf" in str(headers):
+                cdn_detected = "AWS CloudFront"
+                protection_detected = True
+            elif "x-fastly" in str(headers):
+                cdn_detected = "Fastly"
+                protection_detected = True
+            
+            # Check rate limiting headers
+            if not any(h in headers for h in ["x-ratelimit-limit", "ratelimit-limit", "retry-after"]):
+                vulnerabilities.append(DDoSVulnerability(
+                    type="No Rate Limiting",
+                    risk_level="HIGH",
+                    description="No rate limiting headers detected. Server may be vulnerable to request floods.",
+                    mitigation="Implement rate limiting at application or infrastructure level"
+                ))
+                recommendations.append("Implement rate limiting (X-RateLimit headers)")
+            
+            # Check for no CDN
+            if not protection_detected:
+                vulnerabilities.append(DDoSVulnerability(
+                    type="No CDN Protection",
+                    risk_level="HIGH",
+                    description="No CDN/DDoS protection service detected. Direct attacks possible.",
+                    mitigation="Deploy behind a CDN like Cloudflare, AWS CloudFront, or Akamai"
+                ))
+                recommendations.append("Deploy behind a CDN with DDoS protection")
+            
+            # Check cache headers
+            if "cache-control" not in headers:
+                vulnerabilities.append(DDoSVulnerability(
+                    type="No Caching",
+                    risk_level="MEDIUM",
+                    description="No cache-control headers. Each request hits origin server.",
+                    mitigation="Implement proper caching headers to reduce origin load"
+                ))
+                recommendations.append("Add Cache-Control headers")
+            
+            # Check connection limits
+            if "keep-alive" not in headers.get("connection", "").lower():
+                vulnerabilities.append(DDoSVulnerability(
+                    type="Connection Management",
+                    risk_level="LOW",
+                    description="Connection handling could be optimized.",
+                    mitigation="Enable HTTP Keep-Alive for connection reuse"
+                ))
+            
+            # Calculate overall risk
+            high_count = sum(1 for v in vulnerabilities if v.risk_level == "HIGH")
+            if high_count >= 2:
+                overall_risk = "CRITICAL"
+            elif high_count == 1:
+                overall_risk = "HIGH"
+            elif len(vulnerabilities) > 0:
+                overall_risk = "MEDIUM"
+            else:
+                overall_risk = "LOW"
+            
+            # Add general recommendations
+            if not recommendations:
+                recommendations.append("Good baseline protection detected")
+            
+            recommendations.extend([
+                "Monitor traffic patterns for anomalies",
+                "Have an incident response plan ready",
+                "Consider geographic rate limiting"
+            ])
+            
+            # Save to history
+            history = ScanHistory(
+                scan_type="DDoS Analysis",
+                target=url,
+                result_summary=f"Risk: {overall_risk}, Vulnerabilities: {len(vulnerabilities)}"
+            )
+            await db.scan_history.insert_one(history.dict())
+            
+            return DDoSAnalysisResult(
+                url=url,
+                overall_risk=overall_risk,
+                vulnerabilities=vulnerabilities,
+                recommendations=recommendations[:6],
+                protection_detected=protection_detected,
+                cdn_detected=cdn_detected
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Analysis failed: {str(e)}")
+
+# Security Report Generator
+@api_router.post("/intel/report", response_model=SecurityReport)
+async def generate_security_report(request: SecurityReportRequest):
+    """Generate a professional security report using AI"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    
+    try:
+        system_message = """You are X=π, a professional security report generator.
+Create concise, professional security reports in the following format based on the findings provided.
+Use technical language appropriate for the report type.
+Be specific about vulnerabilities and remediation steps.
+Sign as: - X=π by Carbi"""
+
+        prompt = f"""Generate a {request.report_type} security report for target: {request.target}
+
+Severity: {request.severity}
+
+Findings:
+{chr(10).join(f'- {f}' for f in request.findings)}
+
+Provide:
+1. Executive Summary (2-3 sentences)
+2. Technical Details (brief technical analysis)
+3. Recommendations (actionable steps)
+
+Format as JSON with keys: executive_summary, technical_details, recommendations (list)"""
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"report_{uuid.uuid4()}",
+            system_message=system_message
+        ).with_model("openai", "gpt-4o")
+        
+        response = await chat.send_message(UserMessage(text=prompt))
+        
+        # Parse response (handle both JSON and text)
+        import json
+        try:
+            # Try to extract JSON from response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                report_data = json.loads(response[json_start:json_end])
+            else:
+                report_data = {
+                    "executive_summary": response[:300],
+                    "technical_details": response,
+                    "recommendations": request.findings
+                }
+        except:
+            report_data = {
+                "executive_summary": response[:300],
+                "technical_details": response,
+                "recommendations": ["Review findings and implement fixes"]
+            }
+        
+        report = SecurityReport(
+            target=request.target,
+            report_type=request.report_type,
+            severity=request.severity,
+            findings=request.findings,
+            executive_summary=report_data.get("executive_summary", ""),
+            technical_details=report_data.get("technical_details", ""),
+            recommendations=report_data.get("recommendations", [])
+        )
+        
+        # Save report to database
+        await db.security_reports.insert_one(report.dict())
+        
+        # Save to history
+        history = ScanHistory(
+            scan_type="Report Generated",
+            target=request.target,
+            result_summary=f"{request.report_type} report - {request.severity}"
+        )
+        await db.scan_history.insert_one(history.dict())
+        
+        return report
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+# Get saved reports
+@api_router.get("/intel/reports")
+async def get_security_reports():
+    """Get saved security reports"""
+    reports = await db.security_reports.find().sort("timestamp", -1).to_list(20)
+    return [SecurityReport(**r) for r in reports]
+
 # Include the router
 app.include_router(api_router)
 
