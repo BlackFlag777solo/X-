@@ -1986,6 +1986,231 @@ export default function App() {
     </View>
   );
 
+
+  // ========== PENTESTING LAB RENDER ==========
+  const renderPentest = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => setActiveTab('home')}>
+          <Ionicons name="arrow-back" size={28} color="#ff0066" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="skull-crossbones" size={24} color="#ff0066" />
+          <Text style={[styles.eyeTitle, { color: '#ff0066' }]}>PENTESTING LAB</Text>
+        </View>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, maxHeight: 36 }}>
+        {([['dashboard', 'LAB'], ['portscan', 'PUERTOS'], ['sniffer', 'SNIFFER'], ['bruteforce', 'BRUTE'], ['exploits', 'EXPLOITS'], ['trojans', 'TROJANS'], ['sitemap', 'SITEMAP'], ['recon', 'RECON']] as [PentestSubTab, string][]).map(([key, label]) => (
+          <TouchableOpacity key={key} style={[styles.cellSubTab, pentestSubTab === key && { backgroundColor: '#ff0066' }]} onPress={() => setPentestSubTab(key)}>
+            <Text style={[styles.cellSubTabText, { color: pentestSubTab === key ? '#000' : '#ff0066' }]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {pentestSubTab === 'dashboard' && (
+          <>
+            {pentestDash && (
+              <View style={[styles.cellInfoBox, { borderColor: '#ff006620' }]}>
+                <MaterialCommunityIcons name="skull-crossbones" size={24} color="#ff0066" />
+                <View style={{ marginLeft: 10 }}>
+                  <Text style={{ color: '#ff0066', fontSize: 14, fontWeight: 'bold' }}>Pentesting Lab (ians)</Text>
+                  <Text style={{ color: '#888', fontSize: 9 }}>Entorno simulado - No se realizan ataques reales</Text>
+                </View>
+              </View>
+            )}
+            {pentestDash && Object.entries(pentestDash.lab_stats).map(([key, val]) => (
+              <View key={key} style={[styles.cellRow, { borderBottomColor: '#1a1a1a' }]}>
+                <Text style={{ color: '#ccc', fontSize: 12, textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</Text>
+                <Text style={{ color: '#ff0066', fontSize: 14, fontWeight: 'bold' }}>{val as number}</Text>
+              </View>
+            ))}
+            {labTargets && labTargets.targets.map((t: any, i: number) => (
+              <View key={i} style={[styles.cellToolCard, { borderLeftColor: t.vulnerabilities > 0 ? '#ff0040' : '#00cc66' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{t.name}</Text>
+                  <View style={[styles.cellBadge, { backgroundColor: '#00ff0030' }]}>
+                    <Text style={{ color: '#00ff88', fontSize: 8 }}>{t.status}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#888', fontSize: 10 }}>{t.ip} | {t.os} | {t.role}</Text>
+                <Text style={{ color: '#ff6644', fontSize: 10 }}>{t.open_ports} puertos | {t.vulnerabilities} vulns</Text>
+              </View>
+            ))}
+          </>
+        )}
+        {pentestSubTab === 'portscan' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ff0066' }]}>
+              <MaterialCommunityIcons name="lan" size={20} color="#ff0066" />
+              <TextInput style={styles.input} placeholder="Target (ej: lab-web-01)" placeholderTextColor="#666" value={portScanTarget} onChangeText={setPortScanTarget} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={runPortScan} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="radar" size={20} color="#000" /><Text style={styles.scanButtonText}>ESCANEAR PUERTOS</Text></>}
+            </TouchableOpacity>
+            {portScanResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff006660' }]}>
+                <Text style={[styles.resultTitle, { color: '#ff0066' }]}>Scan: {portScanResult.target}</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>OS: {portScanResult.os_detection} | {portScanResult.scan_time_seconds}s</Text>
+                <Text style={{ color: '#ff0066', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>{portScanResult.open_ports} abiertos | {portScanResult.filtered_ports} filtrados</Text>
+                {portScanResult.services.map((s: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: s.state === 'open' ? '#ff0066' : '#333' }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: '#fff', fontSize: 11 }}>{s.port}/{s.service}</Text>
+                      <Text style={{ color: s.state === 'open' ? '#ff0066' : '#666', fontSize: 10 }}>{s.state}</Text>
+                    </View>
+                    <Text style={{ color: '#888', fontSize: 9 }}>{s.version}</Text>
+                    {s.vuln && <Text style={{ color: '#ff4444', fontSize: 9 }}>{s.vuln}</Text>}
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        {pentestSubTab === 'sniffer' && (
+          <>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={runSniffer} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="access-point-network" size={20} color="#000" /><Text style={styles.scanButtonText}>CAPTURAR PAQUETES</Text></>}
+            </TouchableOpacity>
+            {snifferResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff006660' }]}>
+                <Text style={[styles.resultTitle, { color: '#ff0066' }]}>{snifferResult.total_packets} Paquetes</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>Sospechosos: {snifferResult.suspicious_packets}</Text>
+                {snifferResult.packets.slice(0, 12).map((p: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 1, borderLeftColor: '#ff006640' }]}>
+                    <Text style={{ color: '#ff6688', fontSize: 9, fontFamily: 'monospace' }}>{p.protocol} {p.source} → {p.destination}</Text>
+                    <Text style={{ color: '#666', fontSize: 8 }} numberOfLines={1}>{p.info}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        {pentestSubTab === 'bruteforce' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ff0066' }]}>
+              <MaterialCommunityIcons name="server" size={20} color="#ff0066" />
+              <TextInput style={styles.input} placeholder="Target (ej: lab-web-01)" placeholderTextColor="#666" value={bruteTarget} onChangeText={setBruteTarget} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={runBruteforce} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="key" size={20} color="#000" /><Text style={styles.scanButtonText}>SSH BRUTEFORCE</Text></>}
+            </TouchableOpacity>
+            {bruteResult && (
+              <View style={[styles.eyeResultCard, { borderColor: bruteResult.success ? '#00ff0060' : '#ff000060' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <MaterialCommunityIcons name={bruteResult.success ? 'check-circle' : 'close-circle'} size={24} color={bruteResult.success ? '#00ff88' : '#ff4444'} />
+                  <Text style={{ color: bruteResult.success ? '#00ff88' : '#ff4444', fontSize: 14, fontWeight: 'bold' }}>{bruteResult.success ? 'ACCESO' : 'FALLIDO'}</Text>
+                </View>
+                {bruteResult.found_credentials && <Text style={{ color: '#00ff88', fontSize: 11, fontFamily: 'monospace', marginTop: 4 }}>{bruteResult.found_credentials}</Text>}
+                <Text style={{ color: '#888', fontSize: 10 }}>{bruteResult.total_attempts} intentos</Text>
+                {bruteResult.recommendations && bruteResult.recommendations.slice(0, 3).map((r: string, i: number) => (
+                  <Text key={i} style={{ color: '#ffaa00', fontSize: 9, marginTop: 2 }}>- {r}</Text>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        {pentestSubTab === 'exploits' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ff0066' }]}>
+              <MaterialCommunityIcons name="bug" size={20} color="#ff0066" />
+              <TextInput style={styles.input} placeholder="Target (ej: lab-web-01)" placeholderTextColor="#666" value={exploitTarget} onChangeText={setExploitTarget} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={() => runExploit()} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="flash" size={20} color="#000" /><Text style={styles.scanButtonText}>EJECUTAR EXPLOIT</Text></>}
+            </TouchableOpacity>
+            {exploitResult && (
+              <View style={[styles.eyeResultCard, { borderColor: exploitResult.success ? '#00ff0060' : '#ff000060' }]}>
+                <Text style={{ color: exploitResult.success ? '#00ff88' : '#ff4444', fontSize: 14, fontWeight: 'bold' }}>{exploitResult.success ? 'EXPLOIT EXITOSO' : 'FALLIDO'}</Text>
+                <Text style={{ color: '#ff6688', fontSize: 10 }}>{exploitResult.exploit.name} ({exploitResult.exploit.cve})</Text>
+                {exploitResult.steps.map((s: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: s.status === 'DONE' || s.status === 'SUCCESS' ? '#00ff88' : '#ff4444' }]}>
+                    <Text style={{ color: '#ccc', fontSize: 9 }}>{s.step}. {s.action}: {s.detail}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {exploitsDb && exploitsDb.exploits.map((e: any, i: number) => (
+              <TouchableOpacity key={i} style={[styles.cellToolCard, { borderLeftColor: getSeverityColor(e.severity) }]} onPress={() => { setExploitTarget(e.target); runExploit(e.id); }}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{e.name}</Text>
+                <Text style={{ color: '#ff6688', fontSize: 9 }}>{e.cve} | {e.type} | {e.target}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+        {pentestSubTab === 'trojans' && (
+          <>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={() => analyzeTrojan()} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="virus" size={20} color="#000" /><Text style={styles.scanButtonText}>ANALIZAR TROJAN</Text></>}
+            </TouchableOpacity>
+            {trojanAnalysis && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff006660' }]}>
+                <Text style={[styles.resultTitle, { color: '#ff0066' }]}>{trojanAnalysis.analysis.name}</Text>
+                <Text style={{ color: '#ccc', fontSize: 10 }}>{trojanAnalysis.analysis.type} | {trojanAnalysis.analysis.language}</Text>
+                <Text style={{ color: '#888', fontSize: 9 }}>{trojanAnalysis.analysis.description}</Text>
+                <Text style={{ color: '#ff6644', fontSize: 9, marginTop: 4 }}>Evasion: {trojanAnalysis.evasion_techniques}</Text>
+                <Text style={{ color: '#ffaa00', fontSize: 9 }}>Deteccion: {trojanAnalysis.detection_rate}</Text>
+                <Text style={{ color: '#888', fontSize: 7, fontFamily: 'monospace', marginTop: 4 }}>MD5: {trojanAnalysis.indicators_of_compromise.md5}</Text>
+              </View>
+            )}
+            {trojanTemplates && trojanTemplates.templates.map((t: any, i: number) => (
+              <TouchableOpacity key={i} style={[styles.cellToolCard, { borderLeftColor: '#ff0066' }]} onPress={() => analyzeTrojan(t.name)}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{t.name}</Text>
+                <Text style={{ color: '#ff6688', fontSize: 9 }}>{t.type} | {t.protocol} | {t.language}</Text>
+                <Text style={{ color: '#ffaa00', fontSize: 8 }}>Deteccion: {t.detection_rate}</Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+        {pentestSubTab === 'sitemap' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ff0066' }]}>
+              <MaterialCommunityIcons name="sitemap" size={20} color="#ff0066" />
+              <TextInput style={styles.input} placeholder="URL (ej: https://example.com)" placeholderTextColor="#666" value={sitemapUrl} onChangeText={setSitemapUrl} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={runSitemap} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>MAPEAR SITIO</Text>}
+            </TouchableOpacity>
+            {sitemapResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff006660' }]}>
+                <Text style={[styles.resultTitle, { color: '#ff0066' }]}>{sitemapResult.target}</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>{sitemapResult.total_paths_discovered} paths | {sitemapResult.accessible} OK | {sitemapResult.forbidden} 403</Text>
+                {sitemapResult.results.slice(0, 12).map((r: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 1, borderLeftColor: r.status === 200 ? '#00cc66' : '#333' }]}>
+                    <Text style={{ color: r.status === 200 ? '#ccc' : '#666', fontSize: 9, fontFamily: 'monospace' }}>{r.status} {r.path}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+        {pentestSubTab === 'recon' && (
+          <>
+            <View style={[styles.inputContainer, { borderColor: '#ff0066' }]}>
+              <MaterialCommunityIcons name="account-search" size={20} color="#ff0066" />
+              <TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={reconUser} onChangeText={setReconUser} />
+            </View>
+            <TouchableOpacity style={[styles.scanButton, { backgroundColor: '#ff0066' }, loading && styles.buttonDisabled]} onPress={runUserRecon} disabled={loading}>
+              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.scanButtonText}>BUSCAR USUARIO</Text>}
+            </TouchableOpacity>
+            {reconResult && (
+              <View style={[styles.eyeResultCard, { borderColor: '#ff006660' }]}>
+                <Text style={[styles.resultTitle, { color: '#ff0066' }]}>@{reconResult.username}</Text>
+                <Text style={{ color: '#888', fontSize: 10 }}>Encontrado: {reconResult.found_on}/{reconResult.total_platforms}</Text>
+                {reconResult.results.filter((r: any) => r.found).map((r: any, i: number) => (
+                  <View key={i} style={[styles.resultItem, { borderLeftWidth: 2, borderLeftColor: '#00ff88' }]}>
+                    <Text style={{ color: '#fff', fontSize: 10 }}>{r.name} ({r.category})</Text>
+                    <Text style={{ color: '#00ff88', fontSize: 8, fontFamily: 'monospace' }}>{r.url}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
   const renderSimpleTab = (title: string, color: string, icon: string, content: React.ReactNode) => (
     <View style={styles.tabContent}>
       <View style={styles.header}>
