@@ -111,7 +111,7 @@ async def gemini_security_analysis(req: GeminiRequest):
     if not GOOGLE_API_KEY:
         raise HTTPException(status_code=500, detail="Google API key not configured")
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key={GOOGLE_API_KEY}"
     
     system_prompt = """Eres X=π (X equals Pi), un asistente de ciberseguridad avanzado creado por Carbi. 
     Respondes en español con un estilo técnico pero accesible. 
@@ -138,13 +138,20 @@ async def gemini_security_analysis(req: GeminiRequest):
             if "candidates" in data and len(data["candidates"]) > 0:
                 text = data["candidates"][0].get("content", {}).get("parts", [{}])[0].get("text", "Sin respuesta")
             else:
-                error_msg = data.get("error", {}).get("message", "Error desconocido")
-                text = f"Error de Gemini: {error_msg}"
+                # Try fallback model
+                fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
+                response = await client.post(fallback_url, json=payload)
+                data = response.json()
+                if "candidates" in data and len(data["candidates"]) > 0:
+                    text = data["candidates"][0].get("content", {}).get("parts", [{}])[0].get("text", "Sin respuesta")
+                else:
+                    error_msg = data.get("error", {}).get("message", "Cuota agotada - intenta más tarde")
+                    text = f"⚠️ {error_msg}"
             
             return {
-                "api": "Google Gemini 2.0 Flash",
+                "api": "Google Gemini AI",
                 "real_data": True,
-                "model": "gemini-2.0-flash",
+                "model": "gemini-2.0-flash-lite",
                 "response": text,
                 "context": req.context,
                 "timestamp": datetime.utcnow().isoformat()
