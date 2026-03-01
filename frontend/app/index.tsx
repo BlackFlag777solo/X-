@@ -1700,17 +1700,34 @@ export default function App() {
             {shodanResult && (
               <View style={[styles.eyeResultCard, { borderColor: '#00ddff60' }]}>
                 <Text style={[styles.resultTitle, { color: '#00ddff' }]}>IP: {shodanResult.ip || shodanIp}</Text>
-                {shodanResult.ports && <Text style={{ color: '#ccc', fontSize: 11 }}>Puertos: {shodanResult.ports.join(', ')}</Text>}
-                {shodanResult.hostnames && <Text style={{ color: '#888', fontSize: 10 }}>Hostnames: {shodanResult.hostnames.join(', ')}</Text>}
-                {shodanResult.vulns && shodanResult.vulns.length > 0 && (
+                {shodanResult.geolocation && (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={{ color: '#ccc', fontSize: 11 }}>{shodanResult.geolocation.city}, {shodanResult.geolocation.region}, {shodanResult.geolocation.country}</Text>
+                    <Text style={{ color: '#888', fontSize: 10 }}>ISP: {shodanResult.network?.isp}</Text>
+                    <Text style={{ color: '#888', fontSize: 10 }}>ASN: {shodanResult.network?.asn}</Text>
+                  </View>
+                )}
+                {shodanResult.security && (
+                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                    {shodanResult.security.is_proxy && <View style={[styles.cellBadge, { backgroundColor: '#ff440030' }]}><Text style={{ color: '#ff4400', fontSize: 9 }}>PROXY</Text></View>}
+                    {shodanResult.security.is_hosting && <View style={[styles.cellBadge, { backgroundColor: '#ffaa0030' }]}><Text style={{ color: '#ffaa00', fontSize: 9 }}>HOSTING</Text></View>}
+                    {shodanResult.security.is_mobile && <View style={[styles.cellBadge, { backgroundColor: '#00cc6630' }]}><Text style={{ color: '#00cc66', fontSize: 9 }}>MOBILE</Text></View>}
+                  </View>
+                )}
+                {shodanResult.shodan_data?.open_ports?.length > 0 && (
+                  <>
+                    <Text style={{ color: '#00ddff', fontSize: 11, fontWeight: 'bold', marginTop: 8 }}>Puertos abiertos:</Text>
+                    <Text style={{ color: '#ccc', fontSize: 10 }}>{shodanResult.shodan_data.open_ports.join(', ')}</Text>
+                  </>
+                )}
+                {shodanResult.shodan_data?.vulns?.length > 0 && (
                   <>
                     <Text style={{ color: '#ff4444', fontSize: 11, fontWeight: 'bold', marginTop: 6 }}>Vulnerabilidades:</Text>
-                    {shodanResult.vulns.map((v: string, i: number) => (
+                    {shodanResult.shodan_data.vulns.map((v: string, i: number) => (
                       <Text key={i} style={{ color: '#ff6666', fontSize: 10 }}>{v}</Text>
                     ))}
                   </>
                 )}
-                {shodanResult.cpes && <Text style={{ color: '#666', fontSize: 10, marginTop: 4 }}>CPEs: {shodanResult.cpes.join(', ')}</Text>}
               </View>
             )}
           </>
