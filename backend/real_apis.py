@@ -111,7 +111,7 @@ async def gemini_security_analysis(req: GeminiRequest):
     if not GOOGLE_API_KEY:
         raise HTTPException(status_code=500, detail="Google API key not configured")
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GOOGLE_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
     
     system_prompt = """Eres X=π (X equals Pi), un asistente de ciberseguridad avanzado creado por Carbi. 
     Respondes en español con un estilo técnico pero accesible. 
