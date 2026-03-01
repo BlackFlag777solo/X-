@@ -164,6 +164,47 @@ export default function App() {
   const [cellularMexico, setCellularMexico] = useState<any>(null);
   const [toolSearch, setToolSearch] = useState('');
 
+  // Secret Scanner states
+  const [secretsSubTab, setSecretsSubTab] = useState<SecretsSubTab>('scanner');
+  const [secretScanText, setSecretScanText] = useState('');
+  const [secretScanResult, setSecretScanResult] = useState<any>(null);
+  const [secretPatterns, setSecretPatterns] = useState<any>(null);
+  const [keyhacksData, setKeyhacksData] = useState<any>(null);
+
+  // Google Dorks states
+  const [dorksSubTab, setDorksSubTab] = useState<DorksSubTab>('database');
+  const [dorksData, setDorksData] = useState<any>(null);
+  const [dorksOperators, setDorksOperators] = useState<any>(null);
+  const [dorkTarget, setDorkTarget] = useState('');
+  const [dorkType, setDorkType] = useState('general');
+  const [dorkBuilderResult, setDorkBuilderResult] = useState<any>(null);
+  const [dorkSearchFilter, setDorkSearchFilter] = useState('');
+  const [dorkCategoryFilter, setDorkCategoryFilter] = useState('');
+
+  // Mexico OSINT v2 states
+  const [mexSubTab, setMexSubTab] = useState<MexSubTab>('dashboard');
+  const [mexDashboard, setMexDashboard] = useState<any>(null);
+  const [mexStates, setMexStates] = useState<any>(null);
+  const [mexCities, setMexCities] = useState<any>(null);
+  const [mexZipInput, setMexZipInput] = useState('');
+  const [mexZipResult, setMexZipResult] = useState<any>(null);
+  const [mexCurpInput, setMexCurpInput] = useState('');
+  const [mexCurpResult, setMexCurpResult] = useState<any>(null);
+  const [mexTelecom, setMexTelecom] = useState<any>(null);
+
+  // Real APIs states
+  const [realSubTab, setRealSubTab] = useState<RealSubTab>('shodan');
+  const [shodanIp, setShodanIp] = useState('');
+  const [shodanResult, setShodanResult] = useState<any>(null);
+  const [realBreachEmail, setRealBreachEmail] = useState('');
+  const [realBreachResult, setRealBreachResult] = useState<any>(null);
+  const [sslDomain, setSslDomain] = useState('');
+  const [sslResult, setSslResult] = useState<any>(null);
+  const [weatherCity, setWeatherCity] = useState('');
+  const [weatherResult, setWeatherResult] = useState<any>(null);
+  const [safeBrowsingUrl, setSafeBrowsingUrl] = useState('');
+  const [safeBrowsingResult, setSafeBrowsingResult] = useState<any>(null);
+
   // Load global stats on Eye tab
   useEffect(() => {
     if (activeTab === 'eye') {
