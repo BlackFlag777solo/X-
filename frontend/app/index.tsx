@@ -206,6 +206,26 @@ export default function App() {
   const [safeBrowsingUrl, setSafeBrowsingUrl] = useState('');
   const [safeBrowsingResult, setSafeBrowsingResult] = useState<any>(null);
 
+  // Pentesting Lab states
+  const [pentestSubTab, setPentestSubTab] = useState<PentestSubTab>('dashboard');
+  const [pentestDash, setPentestDash] = useState<any>(null);
+  const [labTargets, setLabTargets] = useState<any>(null);
+  const [portScanTarget, setPortScanTarget] = useState('lab-web-01');
+  const [portScanResult, setPortScanResult] = useState<any>(null);
+  const [snifferResult, setSnifferResult] = useState<any>(null);
+  const [bruteTarget, setBruteTarget] = useState('lab-web-01');
+  const [bruteUser, setBruteUser] = useState('admin');
+  const [bruteResult, setBruteResult] = useState<any>(null);
+  const [exploitsDb, setExploitsDb] = useState<any>(null);
+  const [exploitTarget, setExploitTarget] = useState('lab-web-01');
+  const [exploitResult, setExploitResult] = useState<any>(null);
+  const [trojanTemplates, setTrojanTemplates] = useState<any>(null);
+  const [trojanAnalysis, setTrojanAnalysis] = useState<any>(null);
+  const [sitemapUrl, setSitemapUrl] = useState('');
+  const [sitemapResult, setSitemapResult] = useState<any>(null);
+  const [reconUser, setReconUser] = useState('');
+  const [reconResult, setReconResult] = useState<any>(null);
+
   // Load global stats on Eye tab
   useEffect(() => {
     if (activeTab === 'eye') {
