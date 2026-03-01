@@ -1850,6 +1850,9 @@ app.include_router(api_router)
 # Include Mexico router
 app.include_router(eye_router)
 
+# Include Cellular Intelligence router
+app.include_router(cellular_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
