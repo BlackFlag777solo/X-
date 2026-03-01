@@ -714,6 +714,59 @@ export default function App() {
     }
   }, [activeTab, pentestSubTab]);
 
+  // ========== CYBER TOOLS UNIVERSAL EXECUTOR ==========
+  const runCyberTool = async () => {
+    if (!ctInput.trim() && ctSubTab !== 'passgen') return;
+    setLoading(true);
+    setCtResult(null);
+    try {
+      let response;
+      switch (ctSubTab) {
+        case 'portscan':
+          response = await axios.post(`${API_URL}/api/tools/port-scan`, { target: ctInput, ports: ctInput2 || "21,22,23,25,53,80,110,143,443,445,3306,3389,5432,8080" });
+          break;
+        case 'dns':
+          response = await axios.post(`${API_URL}/api/tools/dns-lookup`, { domain: ctInput });
+          break;
+        case 'whois':
+          response = await axios.post(`${API_URL}/api/tools/whois`, { domain: ctInput });
+          break;
+        case 'hash':
+          response = await axios.post(`${API_URL}/api/tools/hash`, { text: ctInput });
+          break;
+        case 'crack':
+          response = await axios.post(`${API_URL}/api/tools/crack-hash`, { hash_value: ctInput });
+          break;
+        case 'encode':
+          response = await axios.post(`${API_URL}/api/tools/encode`, { text: ctInput, operation: ctEncodeOp });
+          break;
+        case 'jwt':
+          response = await axios.post(`${API_URL}/api/tools/jwt-decode`, { token: ctInput });
+          break;
+        case 'passgen':
+          response = await axios.post(`${API_URL}/api/tools/password-gen`, { length: parseInt(ctInput) || 20, count: 5 });
+          break;
+        case 'passcheck':
+          response = await axios.post(`${API_URL}/api/tools/password-check`, { password: ctInput });
+          break;
+        case 'subnet':
+          response = await axios.post(`${API_URL}/api/tools/subnet`, { cidr: ctInput });
+          break;
+        case 'headers':
+          response = await axios.post(`${API_URL}/api/tools/http-headers`, { url: ctInput });
+          break;
+        case 'ping':
+          response = await axios.post(`${API_URL}/api/tools/ping`, { target: ctInput, count: 4 });
+          break;
+      }
+      if (response) setCtResult(response.data);
+    } catch (error: any) {
+      setCtResult({ error: error.response?.data?.detail || 'Error ejecutando herramienta' });
+    }
+    setLoading(false);
+  };
+
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
