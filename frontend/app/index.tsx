@@ -711,7 +711,7 @@ export default function App() {
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>X=pi</Text>
         <Text style={styles.subtitleText}>by Carbi</Text>
-        <Text style={styles.taglineText}>Cybersecurity Toolkit v5.0</Text>
+        <Text style={styles.taglineText}>Cybersecurity Toolkit v6.0</Text>
       </View>
 
       <View style={styles.featuresGrid}>
