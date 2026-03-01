@@ -243,9 +243,12 @@ async def generate_hash(req: HashReq):
     else:
         raise HTTPException(status_code=400, detail=f"Unknown algorithm: {req.algorithm}")
 
-    # Also generate NTLM hash (Windows)
+    # Also generate NTLM hash (Windows) - only if md4 is available
     if req.algorithm == "all":
-        hashes["ntlm"] = hashlib.new('md4', req.text.encode('utf-16le')).hexdigest()
+        try:
+            hashes["ntlm"] = hashlib.new('md4', req.text.encode('utf-16le')).hexdigest()
+        except ValueError:
+            hashes["ntlm"] = "md4 not available on this system"
 
     return {
         "tool": "Real Hash Generator",
