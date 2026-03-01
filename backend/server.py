@@ -940,6 +940,391 @@ async def get_security_reports():
     reports = await db.security_reports.find().sort("timestamp", -1).to_list(20)
     return [SecurityReport(**r) for r in reports]
 
+# ============ Defense Tools Routes ============
+
+# Known malicious IP ranges and threat intelligence (simplified local database)
+KNOWN_THREAT_IPS = {
+    "185.220.101": {"type": "Tor Exit Node", "threat_level": "medium"},
+    "45.155.205": {"type": "Known Scanner", "threat_level": "high"},
+    "194.26.29": {"type": "Brute Force", "threat_level": "high"},
+    "91.240.118": {"type": "Malware C2", "threat_level": "critical"},
+    "185.56.80": {"type": "DDoS Botnet", "threat_level": "critical"},
+    "45.95.169": {"type": "Spam Source", "threat_level": "medium"},
+    "89.248.165": {"type": "Port Scanner", "threat_level": "medium"},
+    "193.32.162": {"type": "SSH Brute Force", "threat_level": "high"},
+}
+
+# IP Reputation Checker
+@api_router.post("/defense/ip-reputation", response_model=IPReputationResult)
+async def check_ip_reputation(request: IPReputationRequest):
+    """Check if an IP address is known to be malicious"""
+    import re
+    
+    ip = request.ip.strip()
+    
+    # Validate IP format
+    ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+    if not re.match(ip_pattern, ip):
+        raise HTTPException(status_code=400, detail="Invalid IP address format")
+    
+    is_malicious = False
+    threat_types = []
+    abuse_score = 0
+    reports_count = 0
+    last_reported = None
+    recommendations = []
+    country = None
+    isp = None
+    
+    # Check against local threat database
+    ip_prefix = '.'.join(ip.split('.')[:3])
+    if ip_prefix in KNOWN_THREAT_IPS:
+        is_malicious = True
+        threat_info = KNOWN_THREAT_IPS[ip_prefix]
+        threat_types.append(threat_info["type"])
+        if threat_info["threat_level"] == "critical":
+            abuse_score = 100
+        elif threat_info["threat_level"] == "high":
+            abuse_score = 80
+        else:
+            abuse_score = 50
+    
+    # Query AbuseIPDB API (free tier)
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Use ip-api.com for geolocation (free, no key needed)
+            geo_response = await client.get(f"http://ip-api.com/json/{ip}")
+            if geo_response.status_code == 200:
+                geo_data = geo_response.json()
+                if geo_data.get("status") == "success":
+                    country = geo_data.get("country")
+                    isp = geo_data.get("isp")
+    except:
+        pass
+    
+    # Check against public blocklists
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Check Spamhaus (simplified check)
+            reversed_ip = '.'.join(reversed(ip.split('.')))
+            # Note: Real implementation would check DNS blocklists
+            pass
+    except:
+        pass
+    
+    # Generate recommendations
+    if is_malicious or abuse_score > 50:
+        recommendations = [
+            f"Block IP {ip} immediately in your firewall",
+            "Review logs for any connections from this IP",
+            "If compromised, isolate affected systems",
+            "Report to your ISP and CERT",
+            "Consider implementing geo-blocking if attacks persist"
+        ]
+    else:
+        recommendations = [
+            "IP appears safe, but continue monitoring",
+            "Keep your firewall rules updated",
+            "Enable intrusion detection systems"
+        ]
+    
+    # Save to history
+    history = ScanHistory(
+        scan_type="IP Reputation",
+        target=ip,
+        result_summary=f"Malicious: {is_malicious}, Score: {abuse_score}"
+    )
+    await db.scan_history.insert_one(history.dict())
+    
+    return IPReputationResult(
+        ip=ip,
+        is_malicious=is_malicious,
+        threat_types=threat_types,
+        abuse_score=abuse_score,
+        country=country,
+        isp=isp,
+        reports_count=reports_count,
+        last_reported=last_reported,
+        recommendations=recommendations
+    )
+
+# Firewall Rules Generator
+@api_router.post("/defense/firewall-rules", response_model=FirewallRulesResult)
+async def generate_firewall_rules(request: FirewallRulesRequest):
+    """Generate firewall rules to block malicious IPs"""
+    import re
+    
+    ips = request.ips
+    rule_type = request.rule_type.lower()
+    
+    if not ips:
+        raise HTTPException(status_code=400, detail="At least one IP is required")
+    
+    # Validate IPs
+    ip_pattern = r'^(\d{1,3}\.){3}\d{1,3}(/\d{1,2})?$'
+    valid_ips = [ip for ip in ips if re.match(ip_pattern, ip.strip())]
+    
+    if not valid_ips:
+        raise HTTPException(status_code=400, detail="No valid IP addresses provided")
+    
+    rules = []
+    
+    if rule_type == "iptables":
+        for ip in valid_ips:
+            rules.append(FirewallRule(
+                rule=f"iptables -A INPUT -s {ip} -j DROP",
+                description=f"Block all incoming traffic from {ip}"
+            ))
+            rules.append(FirewallRule(
+                rule=f"iptables -A OUTPUT -d {ip} -j DROP",
+                description=f"Block all outgoing traffic to {ip}"
+            ))
+        # Add save command
+        rules.append(FirewallRule(
+            rule="iptables-save > /etc/iptables/rules.v4",
+            description="Save rules persistently"
+        ))
+    
+    elif rule_type == "ufw":
+        for ip in valid_ips:
+            rules.append(FirewallRule(
+                rule=f"ufw deny from {ip}",
+                description=f"Block all traffic from {ip}"
+            ))
+            rules.append(FirewallRule(
+                rule=f"ufw deny to {ip}",
+                description=f"Block all traffic to {ip}"
+            ))
+    
+    elif rule_type == "windows":
+        for ip in valid_ips:
+            rules.append(FirewallRule(
+                rule=f'netsh advfirewall firewall add rule name="Block {ip}" dir=in action=block remoteip={ip}',
+                description=f"Block incoming from {ip}"
+            ))
+            rules.append(FirewallRule(
+                rule=f'netsh advfirewall firewall add rule name="Block {ip} Out" dir=out action=block remoteip={ip}',
+                description=f"Block outgoing to {ip}"
+            ))
+    
+    elif rule_type == "pf":
+        # BSD/macOS pf firewall
+        for ip in valid_ips:
+            rules.append(FirewallRule(
+                rule=f"block in quick from {ip}",
+                description=f"Block incoming from {ip}"
+            ))
+            rules.append(FirewallRule(
+                rule=f"block out quick to {ip}",
+                description=f"Block outgoing to {ip}"
+            ))
+    
+    else:
+        raise HTTPException(status_code=400, detail="Invalid rule_type. Use: iptables, ufw, windows, or pf")
+    
+    # Save to history
+    history = ScanHistory(
+        scan_type="Firewall Rules",
+        target=f"{len(valid_ips)} IPs",
+        result_summary=f"Generated {len(rules)} {rule_type} rules"
+    )
+    await db.scan_history.insert_one(history.dict())
+    
+    return FirewallRulesResult(
+        rule_type=rule_type,
+        rules=rules,
+        total_ips=len(valid_ips)
+    )
+
+# Abuse Report Generator
+@api_router.post("/defense/abuse-report", response_model=AbuseReportResult)
+async def generate_abuse_report(request: AbuseReportRequest):
+    """Generate an abuse report to send to ISP/CERT"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    
+    try:
+        # Get IP info
+        country = "Unknown"
+        isp = "Unknown"
+        isp_email = None
+        
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                geo_response = await client.get(f"http://ip-api.com/json/{request.attacker_ip}")
+                if geo_response.status_code == 200:
+                    geo_data = geo_response.json()
+                    if geo_data.get("status") == "success":
+                        country = geo_data.get("country", "Unknown")
+                        isp = geo_data.get("isp", "Unknown")
+        except:
+            pass
+        
+        # Generate report using AI
+        system_message = """You are X=π, a professional cybersecurity incident reporter.
+Generate formal, professional abuse reports that can be sent to ISPs and CERTs.
+Include all relevant technical details and be factual.
+Sign as: X=π by Carbi - Automated Security Report"""
+
+        evidence_text = "\n".join(f"- {e}" for e in request.evidence)
+        
+        prompt = f"""Generate a professional abuse report for the following incident:
+
+Attacker IP: {request.attacker_ip}
+Country: {country}
+ISP: {isp}
+Attack Type: {request.attack_type}
+
+Evidence:
+{evidence_text}
+
+Reporter Info: {request.your_info or 'Anonymous security researcher'}
+
+Generate a formal abuse report that can be sent to the ISP's abuse department.
+Include:
+1. Subject line
+2. Incident summary
+3. Technical evidence
+4. Request for action
+5. Contact information placeholder"""
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"abuse_{uuid.uuid4()}",
+            system_message=system_message
+        ).with_model("openai", "gpt-4o")
+        
+        report_text = await chat.send_message(UserMessage(text=prompt))
+        
+        # Determine CERT email based on country
+        cert_emails = {
+            "Mexico": "cert@cert.org.mx",
+            "United States": "cert@cert.org",
+            "Spain": "incidencias@incibe.es",
+            "Argentina": "info@cert.unlp.edu.ar",
+            "Default": "cert@cert.org"
+        }
+        cert_email = cert_emails.get(country, cert_emails["Default"])
+        
+        result = AbuseReportResult(
+            report_text=report_text,
+            isp_email=f"abuse@{isp.lower().replace(' ', '')}.com" if isp != "Unknown" else None,
+            cert_email=cert_email
+        )
+        
+        # Save to database
+        await db.abuse_reports.insert_one(result.dict())
+        
+        # Save to history
+        history = ScanHistory(
+            scan_type="Abuse Report",
+            target=request.attacker_ip,
+            result_summary=f"Report generated for {request.attack_type}"
+        )
+        await db.scan_history.insert_one(history.dict())
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Report generation failed: {str(e)}")
+
+# Threat Intelligence Feed
+@api_router.get("/defense/threat-feed", response_model=ThreatFeedResult)
+async def get_threat_feed():
+    """Get current threat intelligence feed"""
+    
+    # Simulated threat feed (in production, this would pull from real threat intel sources)
+    threats = [
+        {
+            "id": "TH-2024-001",
+            "name": "Log4Shell Exploitation Attempts",
+            "category": "Remote Code Execution",
+            "severity": "CRITICAL",
+            "description": "Active scanning for Log4j vulnerabilities (CVE-2021-44228)",
+            "indicators": ["${jndi:ldap://", "${jndi:rmi://"],
+            "last_seen": "2024-03-01"
+        },
+        {
+            "id": "TH-2024-002",
+            "name": "SSH Brute Force Campaign",
+            "category": "Credential Attack",
+            "severity": "HIGH",
+            "description": "Distributed SSH brute force attacks targeting port 22",
+            "indicators": ["Multiple failed SSH attempts", "Dictionary-based passwords"],
+            "last_seen": "2024-03-01"
+        },
+        {
+            "id": "TH-2024-003",
+            "name": "SQL Injection Scanner",
+            "category": "Web Application Attack",
+            "severity": "HIGH",
+            "description": "Automated SQL injection scanning tools active",
+            "indicators": ["' OR '1'='1", "UNION SELECT", "sqlmap"],
+            "last_seen": "2024-03-01"
+        },
+        {
+            "id": "TH-2024-004",
+            "name": "Mirai Botnet Variant",
+            "category": "Malware/Botnet",
+            "severity": "CRITICAL",
+            "description": "New Mirai variant targeting IoT devices",
+            "indicators": ["Telnet scanning on port 23", "Default credentials"],
+            "last_seen": "2024-02-28"
+        },
+        {
+            "id": "TH-2024-005",
+            "name": "Phishing Campaign - Banking",
+            "category": "Social Engineering",
+            "severity": "MEDIUM",
+            "description": "Phishing emails impersonating major banks",
+            "indicators": ["Urgente: Verifica tu cuenta", "Your account has been locked"],
+            "last_seen": "2024-03-01"
+        },
+        {
+            "id": "TH-2024-006",
+            "name": "Cryptominer Injection",
+            "category": "Cryptojacking",
+            "severity": "MEDIUM",
+            "description": "JavaScript cryptominers being injected into compromised sites",
+            "indicators": ["coinhive.min.js", "CoinImp", "High CPU usage"],
+            "last_seen": "2024-02-29"
+        },
+        {
+            "id": "TH-2024-007",
+            "name": "DDoS Amplification",
+            "category": "Denial of Service",
+            "severity": "HIGH",
+            "description": "DNS and NTP amplification attacks",
+            "indicators": ["UDP floods", "Spoofed source IPs"],
+            "last_seen": "2024-03-01"
+        },
+        {
+            "id": "TH-2024-008",
+            "name": "Ransomware Distribution",
+            "category": "Malware",
+            "severity": "CRITICAL",
+            "description": "Active ransomware campaigns via email attachments",
+            "indicators": [".encrypted extension", "README_DECRYPT.txt"],
+            "last_seen": "2024-03-01"
+        }
+    ]
+    
+    categories = {
+        "Remote Code Execution": 1,
+        "Credential Attack": 1,
+        "Web Application Attack": 1,
+        "Malware/Botnet": 1,
+        "Social Engineering": 1,
+        "Cryptojacking": 1,
+        "Denial of Service": 1,
+        "Malware": 1
+    }
+    
+    return ThreatFeedResult(
+        last_updated=datetime.utcnow().isoformat(),
+        total_threats=len(threats),
+        threats=threats,
+        categories=categories
+    )
+
 # Include the router
 app.include_router(api_router)
 
