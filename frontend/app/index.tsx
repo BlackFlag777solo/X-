@@ -227,6 +227,13 @@ export default function App() {
   const [reconUser, setReconUser] = useState('');
   const [reconResult, setReconResult] = useState<any>(null);
 
+  // Cyber Tools states
+  const [ctSubTab, setCtSubTab] = useState<CyberToolsSubTab>('portscan');
+  const [ctInput, setCtInput] = useState('');
+  const [ctInput2, setCtInput2] = useState('');
+  const [ctResult, setCtResult] = useState<any>(null);
+  const [ctEncodeOp, setCtEncodeOp] = useState('base64_encode');
+
   // Load global stats on Eye tab
   useEffect(() => {
     if (activeTab === 'eye') {
