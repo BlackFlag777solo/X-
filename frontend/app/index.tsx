@@ -396,6 +396,24 @@ export default function App() {
         </View>
       </TouchableOpacity>
 
+      {/* CELLULAR INTELLIGENCE MODULE */}
+      <TouchableOpacity style={styles.cellCard} onPress={() => setActiveTab('cellular')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#0a1a2a' }]}>
+            <MaterialCommunityIcons name="cellphone-wireless" size={36} color="#00ccff" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#00ccff' }]}>CELLULAR INTEL</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#0088bb' }]}>2G/3G/4G/5G | SDR Tools | SS7 | IMSI</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#00aadd' }]}>28+ Tools</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00aadd' }]}>19 SDR HW</Text>
+          <Text style={[styles.eyeCardStat, { color: '#00aadd' }]}>12 Vectors</Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.footerInline}>
         <Text style={styles.footerText}>X=pi by Carbi - v4.0</Text>
       </View>
