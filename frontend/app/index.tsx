@@ -20,9 +20,13 @@ import axios from 'axios';
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular';
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis';
 type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 type CellularSubTab = 'dashboard' | 'tools' | 'hardware' | 'attacks' | 'scan' | 'mexico';
+type SecretsSubTab = 'scanner' | 'patterns' | 'keyhacks';
+type DorksSubTab = 'database' | 'operators' | 'builder';
+type MexSubTab = 'dashboard' | 'states' | 'cities' | 'zipcode' | 'curp' | 'telecom';
+type RealSubTab = 'shodan' | 'breach' | 'ssl' | 'weather' | 'safebrowsing';
 
 // World Map Component
 const WorldMap = ({ markers = [], onRegionPress }: { markers: any[], onRegionPress?: (region: any) => void }) => {
