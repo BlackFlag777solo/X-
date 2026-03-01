@@ -174,11 +174,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Saves all scans to MongoDB"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: GET /api/history endpoint working correctly. Returns JSON array of scan history with proper structure (id, scan_type, target, result_summary, timestamp). Confirmed 10+ entries in MongoDB including OSINT, Password Check, Website Analysis types. Data persistence and retrieval working perfectly."
 
 frontend:
   - task: "Home Screen with Matrix effect"
