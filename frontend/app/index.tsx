@@ -168,6 +168,22 @@ export default function App() {
     }
   }, [activeTab]);
 
+  // Load cellular data
+  useEffect(() => {
+    if (activeTab === 'cellular') {
+      loadCellularDashboard();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'cellular') {
+      if (cellularSubTab === 'tools' && !cellularTools) loadCellularTools();
+      if (cellularSubTab === 'hardware' && !cellularHardware) loadCellularHardware();
+      if (cellularSubTab === 'attacks' && !cellularAttacks) loadCellularAttacks();
+      if (cellularSubTab === 'mexico' && !cellularMexico) loadCellularMexico();
+    }
+  }, [cellularSubTab, activeTab]);
+
   // API functions
   const scanOSINT = async () => {
     if (!osintUsername.trim()) return;
