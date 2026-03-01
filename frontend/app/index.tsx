@@ -150,6 +150,16 @@ export default function App() {
   const [domainQuery, setDomainQuery] = useState('');
   const [domainResult, setDomainResult] = useState<any>(null);
 
+  // Cellular states
+  const [cellularSubTab, setCellularSubTab] = useState<CellularSubTab>('dashboard');
+  const [cellularDashboard, setCellularDashboard] = useState<any>(null);
+  const [cellularTools, setCellularTools] = useState<any>(null);
+  const [cellularHardware, setCellularHardware] = useState<any>(null);
+  const [cellularAttacks, setCellularAttacks] = useState<any>(null);
+  const [cellularScan, setCellularScan] = useState<any>(null);
+  const [cellularMexico, setCellularMexico] = useState<any>(null);
+  const [toolSearch, setToolSearch] = useState('');
+
   // Load global stats on Eye tab
   useEffect(() => {
     if (activeTab === 'eye') {
