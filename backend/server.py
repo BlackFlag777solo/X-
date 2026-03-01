@@ -516,7 +516,7 @@ async def get_cve_info(request: CVERequest):
             # Use NVD API
             response = await client.get(
                 f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_id}",
-                headers={"User-Agent": "X=π Security Scanner"}
+                headers={"User-Agent": "XPi Security Scanner"}
             )
             
             if response.status_code != 200:
