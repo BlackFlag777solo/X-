@@ -595,6 +595,117 @@ export default function App() {
     }
   }, [activeTab, mexSubTab]);
 
+  // ========== PENTESTING LAB API FUNCTIONS ==========
+  const loadPentestDash = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/pentest/dashboard`);
+      setPentestDash(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const loadLabTargets = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/pentest/lab/targets`);
+      setLabTargets(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const runPortScan = async () => {
+    if (!portScanTarget.trim()) return;
+    setLoading(true);
+    setPortScanResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/scan/ports`, { target: portScanTarget, scan_type: 'quick' });
+      setPortScanResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const runSniffer = async () => {
+    setLoading(true);
+    setSnifferResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/scan/sniffer`, { interface: 'eth0', duration: 10 });
+      setSnifferResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const runBruteforce = async () => {
+    if (!bruteTarget.trim()) return;
+    setLoading(true);
+    setBruteResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/attack/bruteforce`, { target: bruteTarget, username: bruteUser, service: 'ssh' });
+      setBruteResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const loadExploits = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/pentest/exploits`);
+      setExploitsDb(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const runExploit = async (exploitId?: string) => {
+    setLoading(true);
+    setExploitResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/attack/exploit`, { target: exploitTarget, exploit_id: exploitId || '', payload: 'reverse_shell' });
+      setExploitResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const loadTrojanTemplates = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/pentest/trojan/templates`);
+      setTrojanTemplates(response.data);
+    } catch (error) { console.error(error); }
+  };
+
+  const analyzeTrojan = async (name?: string) => {
+    setLoading(true);
+    setTrojanAnalysis(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/trojan/analyze`, { file_name: name || 'malware.exe' });
+      setTrojanAnalysis(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const runSitemap = async () => {
+    if (!sitemapUrl.trim()) return;
+    setLoading(true);
+    setSitemapResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/recon/sitemap`, { url: sitemapUrl, depth: 3 });
+      setSitemapResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  const runUserRecon = async () => {
+    if (!reconUser.trim()) return;
+    setLoading(true);
+    setReconResult(null);
+    try {
+      const response = await axios.post(`${API_URL}/api/pentest/recon/user`, { username: reconUser });
+      setReconResult(response.data);
+    } catch (error) { console.error(error); }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'pentest') {
+      if (pentestSubTab === 'dashboard' && !pentestDash) { loadPentestDash(); loadLabTargets(); }
+      if (pentestSubTab === 'exploits' && !exploitsDb) loadExploits();
+      if (pentestSubTab === 'trojans' && !trojanTemplates) loadTrojanTemplates();
+    }
+  }, [activeTab, pentestSubTab]);
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
