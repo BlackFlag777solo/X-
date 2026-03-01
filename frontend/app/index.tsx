@@ -857,8 +857,26 @@ export default function App() {
         </View>
       </TouchableOpacity>
 
+      {/* PENTESTING LAB MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#ff0066', backgroundColor: '#1a0016' }]} onPress={() => setActiveTab('pentest')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a0020' }]}>
+            <MaterialCommunityIcons name="skull-crossbones" size={36} color="#ff0066" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#ff0066' }]}>PENTESTING LAB</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#cc0055' }]}>ians | Exploits | Trojans | Bruteforce | Recon</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>6 Targets</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>10 Exploits</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>8 Trojans</Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.footerInline}>
-        <Text style={styles.footerText}>X=pi by Carbi - v5.0</Text>
+        <Text style={styles.footerText}>X=pi by Carbi - v6.0</Text>
       </View>
     </ScrollView>
   );
