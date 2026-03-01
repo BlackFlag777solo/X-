@@ -139,7 +139,7 @@ async def gemini_security_analysis(req: GeminiRequest):
                 text = data["candidates"][0].get("content", {}).get("parts", [{}])[0].get("text", "Sin respuesta")
             else:
                 # Try fallback model
-                fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
+                fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
                 response = await client.post(fallback_url, json=payload)
                 data = response.json()
                 if "candidates" in data and len(data["candidates"]) > 0:
