@@ -45,6 +45,8 @@ from mexico_osint import mexico_router
 from pentest_lab import pentest_router
 # Import Cyber Tools module
 from cyber_tools import tools_router
+# Import Malware C2 Dashboard module
+from malware_c2 import c2_router
 
 # ============ Models ============
 
@@ -1882,6 +1884,9 @@ app.include_router(pentest_router)
 
 # Include Cyber Tools router
 app.include_router(tools_router)
+
+# Include Malware C2 Dashboard router
+app.include_router(c2_router)
 
 app.add_middleware(
     CORSMiddleware,

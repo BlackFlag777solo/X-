@@ -20,7 +20,7 @@ import axios from 'axios';
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools';
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools' | 'c2';
 type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 type CellularSubTab = 'dashboard' | 'tools' | 'hardware' | 'attacks' | 'scan' | 'mexico';
 type SecretsSubTab = 'scanner' | 'patterns' | 'keyhacks';
@@ -29,6 +29,7 @@ type MexSubTab = 'dashboard' | 'states' | 'cities' | 'zipcode' | 'curp' | 'telec
 type RealSubTab = 'shodan' | 'breach' | 'ssl' | 'weather' | 'safebrowsing';
 type PentestSubTab = 'dashboard' | 'portscan' | 'sniffer' | 'bruteforce' | 'exploits' | 'trojans' | 'sitemap' | 'recon';
 type CyberToolsSubTab = 'portscan' | 'dns' | 'whois' | 'hash' | 'crack' | 'encode' | 'jwt' | 'passgen' | 'passcheck' | 'subnet' | 'headers' | 'ping';
+type C2SubTab = 'dashboard' | 'agents' | 'commands' | 'payloads' | 'labs' | 'audit';
 
 // World Map Component
 const WorldMap = ({ markers = [], onRegionPress }: { markers: any[], onRegionPress?: (region: any) => void }) => {
@@ -233,6 +234,36 @@ export default function App() {
   const [ctInput2, setCtInput2] = useState('');
   const [ctResult, setCtResult] = useState<any>(null);
   const [ctEncodeOp, setCtEncodeOp] = useState('base64_encode');
+
+  // C2 Dashboard states
+  const [c2SubTab, setC2SubTab] = useState<C2SubTab>('dashboard');
+  const [c2Dashboard, setC2Dashboard] = useState<any>(null);
+  const [c2Agents, setC2Agents] = useState<any[]>([]);
+  const [c2PlatformFilter, setC2PlatformFilter] = useState('');
+  const [c2SelectedAgent, setC2SelectedAgent] = useState<any>(null);
+  const [c2AgentDetail, setC2AgentDetail] = useState<any>(null);
+  const [c2TaskCmd, setC2TaskCmd] = useState('');
+  const [c2TaskResult, setC2TaskResult] = useState<any>(null);
+  const [c2Payloads, setC2Payloads] = useState<any>(null);
+  const [c2BuildPlatform, setC2BuildPlatform] = useState('android');
+  const [c2BuildType, setC2BuildType] = useState('rat');
+  const [c2BuildResult, setC2BuildResult] = useState<any>(null);
+  const [c2Labs, setC2Labs] = useState<any>(null);
+  const [c2Audit, setC2Audit] = useState<any>(null);
+
+  // Load C2 data
+  useEffect(() => {
+    if (activeTab === 'c2') {
+      loadC2Dashboard();
+      loadC2Agents();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'c2' && c2SubTab === 'payloads') loadC2Payloads();
+    if (activeTab === 'c2' && c2SubTab === 'labs') loadC2Labs();
+    if (activeTab === 'c2' && c2SubTab === 'audit') loadC2Audit();
+  }, [activeTab, c2SubTab]);
 
   // Load global stats on Eye tab
   useEffect(() => {
@@ -766,6 +797,376 @@ export default function App() {
     setLoading(false);
   };
 
+  // ============ C2 Dashboard Functions ============
+  const loadC2Dashboard = async () => {
+    try { const r = await axios.get(`${API_URL}/api/c2/dashboard`); setC2Dashboard(r.data); } catch {}
+  };
+  const loadC2Agents = async (platform?: string) => {
+    try {
+      const params = platform ? `?platform=${platform}` : '';
+      const r = await axios.get(`${API_URL}/api/c2/agents${params}`);
+      setC2Agents(r.data.agents);
+    } catch {}
+  };
+  const loadC2AgentDetail = async (agentId: string) => {
+    try { const r = await axios.get(`${API_URL}/api/c2/agent/${agentId}`); setC2AgentDetail(r.data); } catch {}
+  };
+  const sendC2Task = async () => {
+    if (!c2SelectedAgent || !c2TaskCmd) return;
+    setLoading(true); setC2TaskResult(null);
+    try {
+      const r = await axios.post(`${API_URL}/api/c2/agent/${c2SelectedAgent.id}/task`, { agent_id: c2SelectedAgent.id, command: c2TaskCmd });
+      setC2TaskResult(r.data);
+    } catch (e: any) { setC2TaskResult({ error: e.response?.data?.detail || 'Error' }); }
+    setLoading(false);
+  };
+  const loadC2Payloads = async () => {
+    try { const r = await axios.get(`${API_URL}/api/c2/payloads`); setC2Payloads(r.data); } catch {}
+  };
+  const buildC2Payload = async () => {
+    setLoading(true); setC2BuildResult(null);
+    try {
+      const r = await axios.post(`${API_URL}/api/c2/build`, { platform: c2BuildPlatform, payload_type: c2BuildType });
+      setC2BuildResult(r.data);
+    } catch (e: any) { setC2BuildResult({ error: e.response?.data?.detail || 'Build error' }); }
+    setLoading(false);
+  };
+  const loadC2Labs = async () => {
+    try { const r = await axios.get(`${API_URL}/api/c2/lab/environments`); setC2Labs(r.data); } catch {}
+  };
+  const loadC2Audit = async () => {
+    try { const r = await axios.get(`${API_URL}/api/c2/audit`); setC2Audit(r.data); } catch {}
+  };
+
+  const getPlatformIcon = (p: string) => {
+    switch (p) { case 'windows': return 'microsoft-windows'; case 'linux': return 'linux'; case 'android': return 'android'; case 'ios': return 'apple'; default: return 'devices'; }
+  };
+  const getPlatformColor = (p: string) => {
+    switch (p) { case 'windows': return '#00a4ef'; case 'linux': return '#ffcc00'; case 'android': return '#3ddc84'; case 'ios': return '#aaa'; default: return '#fff'; }
+  };
+
+  // ============ C2 Dashboard Render ============
+  const renderC2 = () => {
+    const c2Tabs: { key: C2SubTab; label: string; icon: string }[] = [
+      { key: 'dashboard', label: 'Panel', icon: 'monitor-dashboard' },
+      { key: 'agents', label: 'Agents', icon: 'cellphone-link' },
+      { key: 'commands', label: 'CMD', icon: 'console' },
+      { key: 'payloads', label: 'Build', icon: 'package-variant-closed' },
+      { key: 'labs', label: 'Labs', icon: 'flask' },
+      { key: 'audit', label: 'Audit', icon: 'clipboard-text' },
+    ];
+
+    return (
+      <View style={styles.tabContent}>
+        {/* Header */}
+        <View style={styles.eyeHeader}>
+          <TouchableOpacity onPress={() => setActiveTab('home')}>
+            <Ionicons name="arrow-back" size={28} color="#ff003c" />
+          </TouchableOpacity>
+          <View style={styles.eyeTitleContainer}>
+            <MaterialCommunityIcons name="skull" size={24} color="#ff003c" />
+            <Text style={[styles.eyeTitle, { color: '#ff003c' }]}>C2 DASHBOARD</Text>
+          </View>
+          <View style={{ backgroundColor: '#ff003c20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+            <Text style={{ color: '#ff003c', fontSize: 8, fontWeight: 'bold' }}>SIM LAB</Text>
+          </View>
+        </View>
+
+        {/* Sub tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 42, marginBottom: 10 }}>
+          {c2Tabs.map(t => (
+            <TouchableOpacity key={t.key}
+              style={[styles.cellSubTab, c2SubTab === t.key && { backgroundColor: '#ff003c' }]}
+              onPress={() => setC2SubTab(t.key)}>
+              <MaterialCommunityIcons name={t.icon as any} size={14} color={c2SubTab === t.key ? '#000' : '#ff003c'} />
+              <Text style={[styles.cellSubTabText, { color: c2SubTab === t.key ? '#000' : '#ff003c' }]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          {/* ===== DASHBOARD TAB ===== */}
+          {c2SubTab === 'dashboard' && (
+            <>
+              {c2Dashboard ? (
+                <>
+                  {/* Stats row */}
+                  <View style={[styles.statsBar, { borderColor: '#ff003c40' }]}>
+                    <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ff003c' }]}>{c2Dashboard.total_agents}</Text><Text style={[styles.statLabel, { color: '#ff668a' }]}>Agents</Text></View>
+                    <View style={styles.statItem}><Text style={[styles.statValue, { color: '#3ddc84' }]}>{c2Dashboard.active_agents}</Text><Text style={[styles.statLabel, { color: '#ff668a' }]}>Active</Text></View>
+                    <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ffcc00' }]}>{c2Dashboard.dormant_agents}</Text><Text style={[styles.statLabel, { color: '#ff668a' }]}>Dormant</Text></View>
+                    <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ff003c' }]}>{c2Dashboard.total_payloads}</Text><Text style={[styles.statLabel, { color: '#ff668a' }]}>Payloads</Text></View>
+                  </View>
+
+                  {/* Platform cards */}
+                  <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>PLATAFORMAS</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    {Object.entries(c2Dashboard.platforms).map(([platform, count]) => (
+                      <TouchableOpacity key={platform}
+                        onPress={() => { setC2PlatformFilter(platform); loadC2Agents(platform); setC2SubTab('agents'); }}
+                        style={{ flex: 1, minWidth: '45%', backgroundColor: '#0d0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: getPlatformColor(platform) + '40' }}>
+                        <MaterialCommunityIcons name={getPlatformIcon(platform) as any} size={28} color={getPlatformColor(platform)} />
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginTop: 4 }}>{platform.toUpperCase()}</Text>
+                        <Text style={{ color: getPlatformColor(platform), fontSize: 20, fontWeight: 'bold' }}>{count as number}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* C2 Server info */}
+                  <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>C2 SERVER</Text>
+                  <View style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#ff003c30', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={{ color: '#888', fontSize: 11 }}>IP</Text><Text style={{ color: '#ff003c', fontSize: 11, fontFamily: 'monospace' }}>{c2Dashboard.c2_server.ip}:{c2Dashboard.c2_server.port}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={{ color: '#888', fontSize: 11 }}>Protocol</Text><Text style={{ color: '#3ddc84', fontSize: 11 }}>{c2Dashboard.c2_server.protocol}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: '#888', fontSize: 11 }}>Uptime</Text><Text style={{ color: '#ffcc00', fontSize: 11 }}>{c2Dashboard.c2_server.uptime}</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ backgroundColor: '#ff003c10', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#ff003c30' }}>
+                    <Text style={{ color: '#ff668a', fontSize: 10, textAlign: 'center' }}>ENTORNO 100% SIMULADO - Solo para fines educativos y auditorias</Text>
+                  </View>
+                </>
+              ) : <ActivityIndicator color="#ff003c" size="large" style={{ marginTop: 40 }} />}
+            </>
+          )}
+
+          {/* ===== AGENTS TAB ===== */}
+          {c2SubTab === 'agents' && (
+            <>
+              {/* Platform filter */}
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                <TouchableOpacity onPress={() => { setC2PlatformFilter(''); loadC2Agents(); }}
+                  style={[styles.searchTypeBtn, !c2PlatformFilter && styles.searchTypeBtnActive, !c2PlatformFilter && { backgroundColor: '#ff003c' }]}>
+                  <Text style={[styles.searchTypeText, !c2PlatformFilter && { color: '#000' }]}>ALL</Text>
+                </TouchableOpacity>
+                {['windows', 'linux', 'android', 'ios'].map(p => (
+                  <TouchableOpacity key={p} onPress={() => { setC2PlatformFilter(p); loadC2Agents(p); }}
+                    style={[styles.searchTypeBtn, c2PlatformFilter === p && { backgroundColor: getPlatformColor(p) }]}>
+                    <Text style={[styles.searchTypeText, c2PlatformFilter === p && { color: '#000' }]}>{p.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {c2Agents.map(agent => (
+                <TouchableOpacity key={agent.id}
+                  onPress={() => { setC2SelectedAgent(agent); loadC2AgentDetail(agent.id); setC2SubTab('commands'); setC2TaskResult(null); setC2TaskCmd(''); }}
+                  style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: agent.status === 'active' ? '#3ddc8440' : '#ffcc0040', borderLeftWidth: 3, borderLeftColor: getPlatformColor(agent.platform) }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <MaterialCommunityIcons name={getPlatformIcon(agent.platform) as any} size={20} color={getPlatformColor(agent.platform)} />
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{agent.id}</Text>
+                    </View>
+                    <View style={{ backgroundColor: agent.status === 'active' ? '#3ddc8420' : '#ffcc0020', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: agent.status === 'active' ? '#3ddc84' : '#ffcc00', fontSize: 9, fontWeight: 'bold' }}>{agent.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ color: '#888', fontSize: 10 }}>{agent.hostname} | {agent.os}</Text>
+                  <Text style={{ color: '#666', fontSize: 10 }}>IP: {agent.ip} | User: {agent.user} | Priv: {agent.privileges}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                    <Text style={{ color: '#ff003c', fontSize: 9 }}>{agent.implant} v{agent.version}</Text>
+                    <Text style={{ color: '#555', fontSize: 9 }}>Last: {agent.last_seen}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {c2Agents.length === 0 && <ActivityIndicator color="#ff003c" style={{ marginTop: 20 }} />}
+            </>
+          )}
+
+          {/* ===== COMMANDS TAB ===== */}
+          {c2SubTab === 'commands' && (
+            <>
+              {c2SelectedAgent ? (
+                <>
+                  {/* Agent info header */}
+                  <View style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: getPlatformColor(c2SelectedAgent.platform) + '40', marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <MaterialCommunityIcons name={getPlatformIcon(c2SelectedAgent.platform) as any} size={22} color={getPlatformColor(c2SelectedAgent.platform)} />
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{c2SelectedAgent.id}</Text>
+                      <Text style={{ color: '#888', fontSize: 11 }}>({c2SelectedAgent.hostname})</Text>
+                    </View>
+                    <Text style={{ color: '#666', fontSize: 10 }}>{c2SelectedAgent.os} | {c2SelectedAgent.ip} | {c2SelectedAgent.privileges}</Text>
+                  </View>
+
+                  {/* Available commands */}
+                  {c2AgentDetail && (
+                    <>
+                      <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>COMANDOS ({c2AgentDetail.command_count})</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                        {c2AgentDetail.available_commands.map((cmd: string) => (
+                          <TouchableOpacity key={cmd} onPress={() => setC2TaskCmd(cmd)}
+                            style={{ backgroundColor: c2TaskCmd === cmd ? '#ff003c' : '#0d0508', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#ff003c40' }}>
+                            <Text style={{ color: c2TaskCmd === cmd ? '#000' : '#ff668a', fontSize: 10, fontWeight: 'bold' }}>{cmd}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.eyeButton, { backgroundColor: '#ff003c' }, (!c2TaskCmd || loading) && styles.buttonDisabled]}
+                        onPress={sendC2Task} disabled={!c2TaskCmd || loading}>
+                        {loading ? <ActivityIndicator color="#000" /> : (
+                          <><MaterialCommunityIcons name="send" size={16} color="#000" /><Text style={styles.eyeButtonText}>EXECUTE: {c2TaskCmd || '...'}</Text></>
+                        )}
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  {/* Task result */}
+                  {c2TaskResult && (
+                    <View style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: c2TaskResult.error ? '#ff444440' : '#3ddc8440' }}>
+                      {c2TaskResult.error ? (
+                        <Text style={{ color: '#ff4444', fontSize: 12 }}>{c2TaskResult.error}</Text>
+                      ) : (
+                        <>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <Text style={{ color: '#3ddc84', fontSize: 12, fontWeight: 'bold' }}>Task: {c2TaskResult.task_id}</Text>
+                            <Text style={{ color: '#888', fontSize: 10 }}>{c2TaskResult.execution_time_ms}ms</Text>
+                          </View>
+                          <View style={{ backgroundColor: '#000', borderRadius: 6, padding: 10 }}>
+                            <Text style={{ color: '#3ddc84', fontSize: 11, fontFamily: 'monospace' }}>{c2TaskResult.result?.output || JSON.stringify(c2TaskResult.result, null, 2)}</Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View style={{ alignItems: 'center', marginTop: 40 }}>
+                  <MaterialCommunityIcons name="cursor-default-click" size={48} color="#ff003c40" />
+                  <Text style={{ color: '#ff668a', fontSize: 13, marginTop: 10 }}>Selecciona un agente en la tab "Agents"</Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* ===== PAYLOADS TAB ===== */}
+          {c2SubTab === 'payloads' && (
+            <>
+              {/* Build section */}
+              <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>PAYLOAD BUILDER</Text>
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                {['android', 'ios', 'linux', 'windows'].map(p => (
+                  <TouchableOpacity key={p} onPress={() => setC2BuildPlatform(p)}
+                    style={{ flex: 1, padding: 8, borderRadius: 6, alignItems: 'center', backgroundColor: c2BuildPlatform === p ? getPlatformColor(p) : '#0d0508', borderWidth: 1, borderColor: getPlatformColor(p) + '40' }}>
+                    <MaterialCommunityIcons name={getPlatformIcon(p) as any} size={18} color={c2BuildPlatform === p ? '#000' : getPlatformColor(p)} />
+                    <Text style={{ color: c2BuildPlatform === p ? '#000' : '#888', fontSize: 9, fontWeight: 'bold', marginTop: 2 }}>{p.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {['rat', 'keylogger', 'ransomware', 'rootkit', 'backdoor', 'stealer', 'spyware', 'beacon'].map(t => (
+                  <TouchableOpacity key={t} onPress={() => setC2BuildType(t)}
+                    style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: c2BuildType === t ? '#ff003c' : '#0d0508', borderWidth: 1, borderColor: '#ff003c30' }}>
+                    <Text style={{ color: c2BuildType === t ? '#000' : '#ff668a', fontSize: 10, fontWeight: 'bold' }}>{t.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity style={[styles.eyeButton, { backgroundColor: '#ff003c' }, loading && styles.buttonDisabled]} onPress={buildC2Payload} disabled={loading}>
+                {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="hammer-wrench" size={16} color="#000" /><Text style={styles.eyeButtonText}>BUILD PAYLOAD</Text></>}
+              </TouchableOpacity>
+
+              {c2BuildResult && !c2BuildResult.error && (
+                <View style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#3ddc8440', marginBottom: 12 }}>
+                  <Text style={{ color: '#3ddc84', fontSize: 14, fontWeight: 'bold', marginBottom: 6 }}>Build: {c2BuildResult.build_id}</Text>
+                  <Text style={{ color: '#fff', fontSize: 12 }}>{c2BuildResult.payload?.name}</Text>
+                  <Text style={{ color: '#888', fontSize: 10, marginTop: 4 }}>File: {c2BuildResult.output_file}</Text>
+                  <Text style={{ color: '#888', fontSize: 10 }}>Size: {c2BuildResult.payload?.size} | Evasion: {c2BuildResult.payload?.evasion}</Text>
+                  <Text style={{ color: '#ff003c', fontSize: 10, marginTop: 4 }}>Detection: {c2BuildResult.detection_rate}</Text>
+                  <View style={{ backgroundColor: '#000', borderRadius: 4, padding: 6, marginTop: 6 }}>
+                    <Text style={{ color: '#666', fontSize: 9, fontFamily: 'monospace' }}>SHA256: {c2BuildResult.file_hash?.substring(0, 32)}...</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Payload catalog */}
+              <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>CATALOGO DE PAYLOADS</Text>
+              {c2Payloads?.all_payloads && Object.entries(c2Payloads.all_payloads).map(([platform, payloads]) => (
+                <View key={platform} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <MaterialCommunityIcons name={getPlatformIcon(platform) as any} size={16} color={getPlatformColor(platform)} />
+                    <Text style={{ color: getPlatformColor(platform), fontSize: 12, fontWeight: 'bold' }}>{platform.toUpperCase()}</Text>
+                  </View>
+                  {(payloads as any[]).map((p: any, i: number) => (
+                    <View key={i} style={{ backgroundColor: '#0d0508', borderRadius: 8, padding: 10, marginBottom: 6, borderLeftWidth: 2, borderLeftColor: getPlatformColor(platform) }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{p.name}</Text>
+                      <Text style={{ color: '#888', fontSize: 10 }}>Type: {p.type} | Size: {p.size}</Text>
+                      <Text style={{ color: '#666', fontSize: 9, marginTop: 2 }}>Evasion: {p.evasion}</Text>
+                      <Text style={{ color: '#666', fontSize: 9 }}>Capabilities: {p.capabilities}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* ===== LABS TAB ===== */}
+          {c2SubTab === 'labs' && (
+            <>
+              <Text style={[styles.sectionTitle, { color: '#ff003c' }]}>LAB ENVIRONMENTS</Text>
+              {c2Labs?.labs?.map((lab: any, i: number) => (
+                <View key={i} style={{ backgroundColor: '#0d0508', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#ff003c30' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{lab.name}</Text>
+                    <View style={{ backgroundColor: lab.difficulty === 'EXPERT' ? '#ff003c' : lab.difficulty === 'HARD' ? '#ff6600' : lab.difficulty === 'MEDIUM' ? '#ffcc00' : '#3ddc84', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: '#000', fontSize: 9, fontWeight: 'bold' }}>{lab.difficulty}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }}>Network: {lab.network} | Agents: {lab.agents}</Text>
+                  <Text style={{ color: '#ff668a', fontSize: 10, marginBottom: 6 }}>{lab.scenario}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                    {lab.targets.map((t: string, j: number) => (
+                      <View key={j} style={{ backgroundColor: '#ff003c10', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: '#ff668a', fontSize: 9 }}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))}
+              {c2Labs?.disclaimer && (
+                <View style={{ backgroundColor: '#ff003c10', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#ff003c30' }}>
+                  <Text style={{ color: '#ff668a', fontSize: 10, textAlign: 'center' }}>{c2Labs.disclaimer}</Text>
+                </View>
+              )}
+              {!c2Labs && <ActivityIndicator color="#ff003c" style={{ marginTop: 20 }} />}
+            </>
+          )}
+
+          {/* ===== AUDIT TAB ===== */}
+          {c2SubTab === 'audit' && (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={[styles.sectionTitle, { color: '#ff003c', marginTop: 0, marginBottom: 0 }]}>AUDIT LOG</Text>
+                <TouchableOpacity onPress={loadC2Audit} style={{ padding: 4 }}>
+                  <MaterialCommunityIcons name="refresh" size={20} color="#ff003c" />
+                </TouchableOpacity>
+              </View>
+              {c2Audit?.entries?.length > 0 ? (
+                c2Audit.entries.slice().reverse().map((e: any, i: number) => (
+                  <View key={i} style={{ backgroundColor: '#0d0508', borderRadius: 8, padding: 10, marginBottom: 6, borderLeftWidth: 2, borderLeftColor: e.result === 'success' ? '#3ddc84' : '#ff003c' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>{e.action}</Text>
+                      <Text style={{ color: '#555', fontSize: 9 }}>{e.timestamp?.split('T')[1]?.split('.')[0]}</Text>
+                    </View>
+                    <Text style={{ color: '#888', fontSize: 9 }}>Agent: {e.agent} | Platform: {e.platform} | User: {e.user}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={{ alignItems: 'center', marginTop: 30 }}>
+                  <MaterialCommunityIcons name="clipboard-text-off" size={40} color="#ff003c40" />
+                  <Text style={{ color: '#ff668a', fontSize: 12, marginTop: 8 }}>Sin registros de auditoria. Ejecuta comandos para generar logs.</Text>
+                </View>
+              )}
+              {!c2Audit && <ActivityIndicator color="#ff003c" style={{ marginTop: 20 }} />}
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+
 
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
@@ -951,6 +1352,24 @@ export default function App() {
           <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>6 Targets</Text>
           <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>10 Exploits</Text>
           <Text style={[styles.eyeCardStat, { color: '#ff3388' }]}>8 Trojans</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* C2 MALWARE DASHBOARD MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#ff003c', backgroundColor: '#1a000d' }]} onPress={() => setActiveTab('c2')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a0015' }]}>
+            <MaterialCommunityIcons name="skull" size={36} color="#ff003c" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#ff003c' }]}>C2 DASHBOARD</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#cc002e' }]}>Command & Control | Malware Lab | Multi-OS</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#ff335f' }]}>8 Agents</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff335f' }]}>16 Payloads</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff335f' }]}>4 Labs</Text>
         </View>
       </TouchableOpacity>
 
@@ -2534,6 +2953,7 @@ export default function App() {
       {activeTab === 'realapis' && renderRealApis()}
       {activeTab === 'pentest' && renderPentest()}
       {activeTab === 'cybertools' && renderCyberTools()}
+      {activeTab === 'c2' && renderC2()}
       {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
         <>
           <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
