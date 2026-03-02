@@ -1173,7 +1173,7 @@ export default function App() {
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>X=pi</Text>
         <Text style={styles.subtitleText}>by Carbi</Text>
-        <Text style={styles.taglineText}>Cybersecurity Toolkit v6.0</Text>
+        <Text style={styles.taglineText}>Cybersecurity Toolkit v7.0</Text>
       </View>
 
       <View style={styles.featuresGrid}>
@@ -1374,7 +1374,7 @@ export default function App() {
       </TouchableOpacity>
 
       <View style={styles.footerInline}>
-        <Text style={styles.footerText}>X=pi by Carbi - v6.0</Text>
+        <Text style={styles.footerText}>X=pi by Carbi - v7.0</Text>
       </View>
     </ScrollView>
   );
