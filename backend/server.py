@@ -47,6 +47,8 @@ from pentest_lab import pentest_router
 from cyber_tools import tools_router
 # Import Malware C2 Dashboard module
 from malware_c2 import c2_router
+# Import Red Team CTF module
+from red_team_ctf import ctf_router
 
 # ============ Models ============
 
@@ -1887,6 +1889,9 @@ app.include_router(tools_router)
 
 # Include Malware C2 Dashboard router
 app.include_router(c2_router)
+
+# Include Red Team CTF router
+app.include_router(ctf_router)
 
 app.add_middleware(
     CORSMiddleware,

@@ -20,7 +20,7 @@ import axios from 'axios';
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools' | 'c2';
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools' | 'c2' | 'ctf';
 type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 type CellularSubTab = 'dashboard' | 'tools' | 'hardware' | 'attacks' | 'scan' | 'mexico';
 type SecretsSubTab = 'scanner' | 'patterns' | 'keyhacks';
@@ -264,6 +264,21 @@ export default function App() {
     if (activeTab === 'c2' && c2SubTab === 'labs') loadC2Labs();
     if (activeTab === 'c2' && c2SubTab === 'audit') loadC2Audit();
   }, [activeTab, c2SubTab]);
+
+  // CTF Red Team states
+  const [ctfExercises, setCtfExercises] = useState<any[]>([]);
+  const [ctfLeaderboard, setCtfLeaderboard] = useState<any>(null);
+  const [ctfActiveExercise, setCtfActiveExercise] = useState<any>(null);
+  const [ctfCurrentStep, setCtfCurrentStep] = useState<any>(null);
+  const [ctfStepIndex, setCtfStepIndex] = useState(0);
+  const [ctfStepResult, setCtfStepResult] = useState<any>(null);
+  const [ctfScore, setCtfScore] = useState(0);
+  const [ctfComplete, setCtfComplete] = useState(false);
+  const [ctfView, setCtfView] = useState<'list' | 'play' | 'leaderboard'>('list');
+
+  useEffect(() => {
+    if (activeTab === 'ctf') { loadCtfExercises(); loadCtfLeaderboard(); }
+  }, [activeTab]);
 
   // Load global stats on Eye tab
   useEffect(() => {
@@ -1168,12 +1183,215 @@ export default function App() {
   };
 
 
+  // ============ CTF Functions ============
+  const loadCtfExercises = async () => {
+    try { const r = await axios.get(`${API_URL}/api/ctf/exercises`); setCtfExercises(r.data.exercises); } catch {}
+  };
+  const loadCtfLeaderboard = async () => {
+    try { const r = await axios.get(`${API_URL}/api/ctf/leaderboard`); setCtfLeaderboard(r.data); } catch {}
+  };
+  const startCtfExercise = async (exerciseId: string) => {
+    setLoading(true); setCtfComplete(false); setCtfScore(0); setCtfStepResult(null);
+    try {
+      const r = await axios.post(`${API_URL}/api/ctf/start`, { exercise_id: exerciseId });
+      setCtfActiveExercise({ ...r.data, _exerciseId: exerciseId });
+      setCtfCurrentStep(r.data.current_step);
+      setCtfStepIndex(0);
+      setCtfView('play');
+    } catch {}
+    setLoading(false);
+  };
+  const executeCtfStep = async () => {
+    if (!ctfActiveExercise) return;
+    setLoading(true); setCtfStepResult(null);
+    try {
+      const r = await axios.post(`${API_URL}/api/ctf/execute`, { exercise_id: ctfActiveExercise._exerciseId, step_index: ctfStepIndex });
+      setCtfStepResult(r.data);
+      setCtfScore(prev => prev + (r.data.points_earned || 0));
+      if (r.data.is_last_step) { setCtfComplete(true); }
+    } catch {}
+    setLoading(false);
+  };
+  const nextCtfStep = () => {
+    if (ctfStepResult?.next_step) {
+      setCtfCurrentStep(ctfStepResult.next_step);
+      setCtfStepIndex(ctfStepResult.next_step.index);
+      setCtfStepResult(null);
+    }
+  };
+
+  const getDiffColor = (d: string) => {
+    switch (d) { case 'BEGINNER': return '#3ddc84'; case 'INTERMEDIATE': return '#ffcc00'; case 'ADVANCED': return '#ff6600'; case 'EXPERT': return '#ff003c'; default: return '#888'; }
+  };
+  const getPhaseColor = (p: string) => {
+    switch (p) {
+      case 'RECONNAISSANCE': return '#00ccff'; case 'INITIAL ACCESS': return '#ff6600'; case 'PRIVILEGE ESCALATION': return '#ff003c';
+      case 'PERSISTENCE': return '#aa00ff'; case 'LATERAL MOVEMENT': return '#ffcc00'; case 'EXFILTRATION': return '#ff0066';
+      case 'CREDENTIAL ACCESS': return '#ff4444'; case 'DOMAIN ADMIN': return '#ff003c'; case 'ENUMERATION': return '#00ccff';
+      case 'TARGET ANALYSIS': return '#00ccff'; case 'EXPLOIT DEVELOPMENT': return '#ff6600'; case 'EXPLOITATION': return '#ff003c';
+      case 'DATA EXTRACTION': return '#ff0066'; case 'WEAPONIZE': return '#ff6600'; case 'DELIVERY': return '#ffcc00';
+      case 'CREDENTIAL HARVEST': return '#ff4444'; case 'PIVOT': return '#aa00ff'; case 'OBJECTIVE': return '#3ddc84';
+      default: return '#888';
+    }
+  };
+
+  // ============ CTF Render ============
+  const renderCtf = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => { if (ctfView !== 'list') { setCtfView('list'); setCtfActiveExercise(null); setCtfStepResult(null); setCtfComplete(false); } else setActiveTab('home'); }}>
+          <Ionicons name="arrow-back" size={28} color="#ff6600" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="flag-checkered" size={24} color="#ff6600" />
+          <Text style={[styles.eyeTitle, { color: '#ff6600' }]}>RED TEAM CTF</Text>
+        </View>
+        <TouchableOpacity onPress={() => setCtfView(ctfView === 'leaderboard' ? 'list' : 'leaderboard')}>
+          <MaterialCommunityIcons name="trophy" size={24} color={ctfView === 'leaderboard' ? '#ffcc00' : '#ff660060'} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+        {/* LEADERBOARD */}
+        {ctfView === 'leaderboard' && ctfLeaderboard && (
+          <>
+            <Text style={[styles.sectionTitle, { color: '#ffcc00' }]}>LEADERBOARD</Text>
+            {ctfLeaderboard.leaderboard.map((e: any) => (
+              <View key={e.rank} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#0d0805', borderRadius: 8, padding: 10, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: e.rank <= 3 ? '#ffcc00' : '#333' }}>
+                <Text style={{ color: e.rank <= 3 ? '#ffcc00' : '#888', fontSize: 18, fontWeight: 'bold', width: 30 }}>#{e.rank}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{e.operator}</Text>
+                  <Text style={{ color: '#888', fontSize: 10 }}>{e.exercises_completed} ejercicios | Mejor: {e.fastest_time}</Text>
+                </View>
+                <Text style={{ color: '#ff6600', fontSize: 16, fontWeight: 'bold' }}>{e.score}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* EXERCISE LIST */}
+        {ctfView === 'list' && (
+          <>
+            <View style={[styles.statsBar, { borderColor: '#ff660040' }]}>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ff6600' }]}>{ctfExercises.length}</Text><Text style={[styles.statLabel, { color: '#ff9944' }]}>Ejercicios</Text></View>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ffcc00' }]}>1550</Text><Text style={[styles.statLabel, { color: '#ff9944' }]}>Puntos</Text></View>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#3ddc84' }]}>4</Text><Text style={[styles.statLabel, { color: '#ff9944' }]}>Niveles</Text></View>
+            </View>
+
+            {ctfExercises.map((ex: any) => (
+              <TouchableOpacity key={ex.id} onPress={() => startCtfExercise(ex.id)}
+                style={{ backgroundColor: '#0d0805', borderRadius: 10, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: getDiffColor(ex.difficulty) + '40', borderLeftWidth: 3, borderLeftColor: getDiffColor(ex.difficulty) }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', flex: 1 }}>{ex.name}</Text>
+                  <View style={{ backgroundColor: getDiffColor(ex.difficulty), paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: '#000', fontSize: 9, fontWeight: 'bold' }}>{ex.difficulty}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: '#999', fontSize: 11, marginBottom: 6 }}>{ex.description}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+                  {ex.objectives.map((obj: string, i: number) => (
+                    <View key={i} style={{ backgroundColor: '#ff660010', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: '#ff9944', fontSize: 9 }}>{obj}</Text>
+                    </View>
+                  ))}
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ color: '#666', fontSize: 10 }}>{ex.category} | {ex.total_steps} pasos | {ex.estimated_time}</Text>
+                  <Text style={{ color: '#ff6600', fontSize: 11, fontWeight: 'bold' }}>{ex.reward_points} pts</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {ctfExercises.length === 0 && <ActivityIndicator color="#ff6600" style={{ marginTop: 20 }} />}
+          </>
+        )}
+
+        {/* ACTIVE EXERCISE - PLAY */}
+        {ctfView === 'play' && ctfActiveExercise && (
+          <>
+            {/* Exercise header */}
+            <View style={{ backgroundColor: '#0d0805', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#ff660030', marginBottom: 10 }}>
+              <Text style={{ color: '#ff6600', fontSize: 15, fontWeight: 'bold', marginBottom: 4 }}>{ctfActiveExercise.exercise}</Text>
+              <Text style={{ color: '#888', fontSize: 10 }}>Target: {ctfActiveExercise.target_network} | Score: {ctfScore}</Text>
+              {/* Progress bar */}
+              <View style={{ height: 4, backgroundColor: '#1a1a1a', borderRadius: 2, marginTop: 8 }}>
+                <View style={{ height: 4, backgroundColor: '#ff6600', borderRadius: 2, width: `${((ctfStepIndex + (ctfStepResult ? 1 : 0)) / ctfActiveExercise.total_steps) * 100}%` }} />
+              </View>
+              <Text style={{ color: '#666', fontSize: 9, marginTop: 4 }}>Paso {ctfStepIndex + 1} de {ctfActiveExercise.total_steps}</Text>
+            </View>
+
+            {/* Mission Complete */}
+            {ctfComplete && ctfStepResult && (
+              <View style={{ backgroundColor: '#0d1a05', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#3ddc84', marginBottom: 12, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="trophy" size={48} color="#ffcc00" />
+                <Text style={{ color: '#3ddc84', fontSize: 20, fontWeight: 'bold', marginTop: 8 }}>MISION COMPLETA</Text>
+                <Text style={{ color: '#ffcc00', fontSize: 16, marginTop: 4 }}>Puntuacion: {ctfStepResult.final_score}/{ctfStepResult.max_score}</Text>
+                <Text style={{ color: '#ff6600', fontSize: 24, fontWeight: 'bold', marginTop: 4 }}>Grado: {ctfStepResult.grade}</Text>
+                <TouchableOpacity onPress={() => { setCtfView('list'); setCtfActiveExercise(null); setCtfComplete(false); setCtfStepResult(null); }}
+                  style={{ marginTop: 12, backgroundColor: '#ff6600', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 }}>
+                  <Text style={{ color: '#000', fontWeight: 'bold' }}>VOLVER A EJERCICIOS</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Current step */}
+            {!ctfComplete && ctfCurrentStep && (
+              <>
+                <View style={{ backgroundColor: getPhaseColor(ctfCurrentStep.phase) + '15', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: getPhaseColor(ctfCurrentStep.phase) + '40', marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <View style={{ backgroundColor: getPhaseColor(ctfCurrentStep.phase), paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
+                      <Text style={{ color: '#000', fontSize: 9, fontWeight: 'bold' }}>{ctfCurrentStep.phase}</Text>
+                    </View>
+                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', flex: 1 }}>{ctfCurrentStep.title}</Text>
+                  </View>
+                  <Text style={{ color: '#ccc', fontSize: 11, marginBottom: 8 }}>{ctfCurrentStep.description}</Text>
+                  <View style={{ backgroundColor: '#000', borderRadius: 6, padding: 8 }}>
+                    <Text style={{ color: '#3ddc84', fontSize: 11, fontFamily: 'monospace' }}>$ {ctfCurrentStep.command_hint}</Text>
+                  </View>
+                </View>
+
+                {/* Execute button */}
+                {!ctfStepResult && (
+                  <TouchableOpacity style={[styles.eyeButton, { backgroundColor: '#ff6600' }, loading && styles.buttonDisabled]} onPress={executeCtfStep} disabled={loading}>
+                    {loading ? <ActivityIndicator color="#000" /> : <><MaterialCommunityIcons name="play" size={16} color="#000" /><Text style={styles.eyeButtonText}>EJECUTAR PASO</Text></>}
+                  </TouchableOpacity>
+                )}
+
+                {/* Step result */}
+                {ctfStepResult && !ctfComplete && (
+                  <View style={{ backgroundColor: '#001a05', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#3ddc8440', marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={{ color: '#3ddc84', fontSize: 13, fontWeight: 'bold' }}>EXITO</Text>
+                      <Text style={{ color: '#ffcc00', fontSize: 12, fontWeight: 'bold' }}>+{ctfStepResult.points_earned} pts</Text>
+                    </View>
+                    <View style={{ backgroundColor: '#000', borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                      <Text style={{ color: '#3ddc84', fontSize: 10, fontFamily: 'monospace' }}>{ctfStepResult.output}</Text>
+                    </View>
+                    <View style={{ backgroundColor: '#ff660010', borderRadius: 6, padding: 8, marginBottom: 10 }}>
+                      <Text style={{ color: '#ff9944', fontSize: 10, fontWeight: 'bold' }}>Intel: {ctfStepResult.intel_gained}</Text>
+                    </View>
+                    <TouchableOpacity onPress={nextCtfStep} style={{ backgroundColor: '#ff6600', paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}>
+                      <Text style={{ color: '#000', fontWeight: 'bold', fontSize: 13 }}>SIGUIENTE PASO</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        <View style={{ backgroundColor: '#ff660010', borderRadius: 8, padding: 10, marginTop: 10, borderWidth: 1, borderColor: '#ff660030' }}>
+          <Text style={{ color: '#ff9944', fontSize: 10, textAlign: 'center' }}>Todos los ejercicios son SIMULADOS - Fines educativos y auditorias</Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
         <Text style={styles.logoText}>X=pi</Text>
         <Text style={styles.subtitleText}>by Carbi</Text>
-        <Text style={styles.taglineText}>Cybersecurity Toolkit v7.0</Text>
+        <Text style={styles.taglineText}>Cybersecurity Toolkit v8.0</Text>
       </View>
 
       <View style={styles.featuresGrid}>
@@ -1373,8 +1591,26 @@ export default function App() {
         </View>
       </TouchableOpacity>
 
+      {/* RED TEAM CTF MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#ff6600', backgroundColor: '#1a0d00' }]} onPress={() => setActiveTab('ctf')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#2a1500' }]}>
+            <MaterialCommunityIcons name="flag-checkered" size={36} color="#ff6600" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#ff6600' }]}>RED TEAM CTF</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#cc5500' }]}>Ejercicios Guiados | Kill Chain | Gamificado</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>4 Misiones</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>1550 Pts</Text>
+          <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>Leaderboard</Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.footerInline}>
-        <Text style={styles.footerText}>X=pi by Carbi - v7.0</Text>
+        <Text style={styles.footerText}>X=pi by Carbi - v8.0</Text>
       </View>
     </ScrollView>
   );
@@ -2954,6 +3190,7 @@ export default function App() {
       {activeTab === 'pentest' && renderPentest()}
       {activeTab === 'cybertools' && renderCyberTools()}
       {activeTab === 'c2' && renderC2()}
+      {activeTab === 'ctf' && renderCtf()}
       {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
         <>
           <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
