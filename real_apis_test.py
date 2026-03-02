@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://xpi-cybersecurity.preview.emergentagent.com/api"
+BACKEND_URL = "https://hacker-c2-lab.preview.emergentagent.com/api"
 
 def log_result(endpoint, status, details=""):
     """Log test result"""

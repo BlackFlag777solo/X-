@@ -12,7 +12,7 @@ from datetime import datetime
 BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
     # Fallback for local testing
-    BASE_URL = "https://xpi-cybersecurity.preview.emergentagent.com"
+    BASE_URL = "https://hacker-c2-lab.preview.emergentagent.com"
 
 class TestSecretScanner:
     """Secret Scanner module tests - 3 endpoints"""

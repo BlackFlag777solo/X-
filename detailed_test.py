@@ -8,7 +8,7 @@ import httpx
 import json
 from datetime import datetime
 
-API_BASE_URL = "https://xpi-cybersecurity.preview.emergentagent.com/api"
+API_BASE_URL = "https://hacker-c2-lab.preview.emergentagent.com/api"
 
 async def test_edge_cases():
     """Test edge cases and data structure validation"""
