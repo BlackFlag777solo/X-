@@ -49,6 +49,8 @@ from cyber_tools import tools_router
 from malware_c2 import c2_router
 # Import Red Team CTF module
 from red_team_ctf import ctf_router
+# Import Training Academy module
+from training_academy import academy_router
 
 # ============ Models ============
 
@@ -1892,6 +1894,9 @@ app.include_router(c2_router)
 
 # Include Red Team CTF router
 app.include_router(ctf_router)
+
+# Include Training Academy router
+app.include_router(academy_router)
 
 app.add_middleware(
     CORSMiddleware,

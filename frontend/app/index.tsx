@@ -22,7 +22,7 @@ import axios from 'axios';
 const { width, height } = Dimensions.get('window');
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
-type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools' | 'c2' | 'ctf';
+type TabType = 'home' | 'osint' | 'password' | 'website' | 'chat' | 'intel' | 'defense' | 'eye' | 'cellular' | 'secrets' | 'dorks' | 'mexosint' | 'realapis' | 'pentest' | 'cybertools' | 'c2' | 'ctf' | 'academy';
 type EyeSubTab = 'search' | 'map' | 'breach' | 'domain';
 type CellularSubTab = 'dashboard' | 'tools' | 'hardware' | 'attacks' | 'scan' | 'mexico';
 type SecretsSubTab = 'scanner' | 'patterns' | 'keyhacks';
@@ -281,22 +281,38 @@ export default function App() {
   // Training Platforms modal
   const [showPlatforms, setShowPlatforms] = useState(false);
   const TRAINING_PLATFORMS = [
-    { emoji: '🧪', name: 'Hack The Box', desc: 'Hacking labs', url: 'https://www.hackthebox.com', color: '#9fef00' },
-    { emoji: '🌱', name: 'TryHackMe', desc: 'Beginner training', url: 'https://tryhackme.com', color: '#88cc14' },
-    { emoji: '🎮', name: 'OverTheWire', desc: 'Security wargames', url: 'https://overthewire.org/wargames/', color: '#00ccff' },
-    { emoji: '🧩', name: 'Root Me', desc: 'Hacking challenges', url: 'https://www.root-me.org', color: '#ffcc00' },
-    { emoji: '🏴', name: 'Hack This Site', desc: 'Classic practice', url: 'https://www.hackthissite.org', color: '#ff6600' },
-    { emoji: '🏁', name: 'picoCTF', desc: 'CTF training', url: 'https://picoctf.org', color: '#3ddc84' },
-    { emoji: '⚔️', name: 'PwnTillDawn', desc: 'Pentest labs', url: 'https://www.wizlynxgroup.com/news/2020/02/18/pwntilldawn/', color: '#ff003c' },
-    { emoji: '🐦', name: 'Parrot CTFs', desc: 'Security CTFs', url: 'https://parrotctfs.com', color: '#00bcd4' },
-    { emoji: '🌐', name: 'PentesterLab', desc: 'Web pentesting', url: 'https://pentesterlab.com', color: '#aa00ff' },
-    { emoji: '🏢', name: 'Immersive Labs', desc: 'Cyber training', url: 'https://www.immersivelabs.com', color: '#ff4081' },
-    { emoji: '🧨', name: 'Proving Grounds', desc: 'Pentest labs', url: 'https://www.offsec.com/labs/', color: '#ff5722' },
-    { emoji: '🛡️', name: 'RangeForce', desc: 'Blue team training', url: 'https://www.rangeforce.com', color: '#2196f3' },
+    { emoji: '🧪', name: 'ShadowForge', desc: 'Hacking labs', url: 'shadowforge', color: '#9fef00' },
+    { emoji: '🌱', name: 'CyberSprout', desc: 'Beginner training', url: 'cybersprout', color: '#88cc14' },
+    { emoji: '🎮', name: 'WarGrid', desc: 'Security wargames', url: 'wargrid', color: '#00ccff' },
+    { emoji: '🧩', name: 'CipherVault', desc: 'Crypto challenges', url: 'ciphervault', color: '#ffcc00' },
+    { emoji: '🏴', name: 'PhantomGate', desc: 'Web hacking', url: 'phantomgate', color: '#ff6600' },
+    { emoji: '🏁', name: 'FlagHunter', desc: 'CTF training', url: 'flaghunter', color: '#3ddc84' },
+    { emoji: '⚔️', name: 'BladePentest', desc: 'Pentest labs', url: 'bladepent', color: '#ff003c' },
+    { emoji: '🐦', name: 'StrikeHawk', desc: 'Advanced CTF', url: 'strikehawk', color: '#00bcd4' },
+    { emoji: '🌐', name: 'WebWraith', desc: 'Web pentesting', url: 'webwraith', color: '#aa00ff' },
+    { emoji: '🏢', name: 'CyberDrill', desc: 'Incident response', url: 'cyberdrill', color: '#ff4081' },
+    { emoji: '🧨', name: 'BreachPoint', desc: 'Advanced pentest', url: 'breachpoint', color: '#ff5722' },
+    { emoji: '🛡️', name: 'BlueShield', desc: 'Blue team', url: 'blueshield', color: '#2196f3' },
   ];
 
   useEffect(() => {
     if (activeTab === 'ctf') { loadCtfExercises(); loadCtfLeaderboard(); }
+  }, [activeTab]);
+
+  // Academy states
+  const [acPrograms, setAcPrograms] = useState<any[]>([]);
+  const [acView, setAcView] = useState<'grid' | 'program' | 'level'>('grid');
+  const [acProgram, setAcProgram] = useState<any>(null);
+  const [acLevel, setAcLevel] = useState<any>(null);
+  const [acChallengeIdx, setAcChallengeIdx] = useState(0);
+  const [acAnswer, setAcAnswer] = useState('');
+  const [acResult, setAcResult] = useState<any>(null);
+  const [acScore, setAcScore] = useState(0);
+  const [acMentorQ, setAcMentorQ] = useState('');
+  const [acMentorA, setAcMentorA] = useState('');
+
+  useEffect(() => {
+    if (activeTab === 'academy') loadAcPrograms();
   }, [activeTab]);
 
   // Load global stats on Eye tab
@@ -1405,6 +1421,246 @@ export default function App() {
     </View>
   );
 
+  // ============ Academy Functions ============
+  const loadAcPrograms = async () => {
+    try { const r = await axios.get(`${API_URL}/api/academy/programs`); setAcPrograms(r.data.programs); } catch {}
+  };
+  const openAcProgram = async (id: string) => {
+    try { const r = await axios.get(`${API_URL}/api/academy/program/${id}`); setAcProgram(r.data); setAcView('program'); } catch {}
+  };
+  const openAcLevel = async (programId: string, levelId: string) => {
+    try {
+      const r = await axios.get(`${API_URL}/api/academy/program/${programId}/level/${levelId}`);
+      setAcLevel(r.data); setAcChallengeIdx(0); setAcAnswer(''); setAcResult(null); setAcScore(0); setAcView('level');
+    } catch {}
+  };
+  const submitAcAnswer = async () => {
+    if (!acLevel || !acAnswer.trim()) return;
+    const ch = acLevel.challenges[acChallengeIdx];
+    setLoading(true); setAcResult(null);
+    try {
+      const r = await axios.post(`${API_URL}/api/academy/submit`, {
+        program_id: acProgram.id, level_id: acLevel.id, challenge_id: ch.id, user_input: acAnswer,
+      });
+      setAcResult(r.data);
+      if (r.data.correct) setAcScore(prev => prev + r.data.points);
+    } catch {}
+    setLoading(false);
+  };
+  const nextAcChallenge = () => {
+    if (acChallengeIdx < acLevel.challenges.length - 1) {
+      setAcChallengeIdx(prev => prev + 1); setAcAnswer(''); setAcResult(null);
+    }
+  };
+  const askAcMentor = async () => {
+    if (!acLevel || !acMentorQ.trim()) return;
+    const ch = acLevel.challenges[acChallengeIdx];
+    setLoading(true); setAcMentorA('');
+    try {
+      const r = await axios.post(`${API_URL}/api/academy/ai-mentor`, {
+        program_id: acProgram.id, level_id: acLevel.id, challenge_id: ch.id, question: acMentorQ,
+      });
+      setAcMentorA(r.data.mentor_response);
+    } catch { setAcMentorA('Mentor no disponible. Revisa la pista del desafio.'); }
+    setLoading(false); setAcMentorQ('');
+  };
+
+  // ============ Academy Render ============
+  const renderAcademy = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.eyeHeader}>
+        <TouchableOpacity onPress={() => {
+          if (acView === 'level') { setAcView('program'); setAcLevel(null); }
+          else if (acView === 'program') { setAcView('grid'); setAcProgram(null); }
+          else setActiveTab('home');
+        }}>
+          <Ionicons name="arrow-back" size={28} color="#00ccff" />
+        </TouchableOpacity>
+        <View style={styles.eyeTitleContainer}>
+          <MaterialCommunityIcons name="school" size={24} color="#00ccff" />
+          <Text style={[styles.eyeTitle, { color: '#00ccff' }]}>
+            {acView === 'level' ? acLevel?.name?.toUpperCase() : acView === 'program' ? acProgram?.name?.toUpperCase() : 'ACADEMY'}
+          </Text>
+        </View>
+        <View style={{ backgroundColor: '#00ccff20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+          <Text style={{ color: '#00ccff', fontSize: 9, fontWeight: 'bold' }}>12 PROG</Text>
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+        {/* GRID VIEW - All 12 Programs */}
+        {acView === 'grid' && (
+          <>
+            <View style={[styles.statsBar, { borderColor: '#00ccff40' }]}>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#00ccff' }]}>12</Text><Text style={[styles.statLabel, { color: '#66ddff' }]}>Programas</Text></View>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#ffcc00' }]}>2310</Text><Text style={[styles.statLabel, { color: '#66ddff' }]}>XP Total</Text></View>
+              <View style={styles.statItem}><Text style={[styles.statValue, { color: '#3ddc84' }]}>75</Text><Text style={[styles.statLabel, { color: '#66ddff' }]}>Desafios</Text></View>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {acPrograms.map(p => (
+                <TouchableOpacity key={p.id} onPress={() => openAcProgram(p.id)}
+                  style={{ width: '48%', backgroundColor: '#080810', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: p.color + '30', borderLeftWidth: 3, borderLeftColor: p.color }}>
+                  <MaterialCommunityIcons name={p.icon as any} size={28} color={p.color} />
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginTop: 6 }}>{p.name}</Text>
+                  <Text style={{ color: p.color, fontSize: 9, marginTop: 2 }}>{p.tagline}</Text>
+                  <Text style={{ color: '#555', fontSize: 9, marginTop: 4 }}>{p.levels} niveles | {p.total_challenges} retos | {p.total_xp} XP</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* PROGRAM VIEW - Levels */}
+        {acView === 'program' && acProgram && (
+          <>
+            <View style={{ backgroundColor: '#080810', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: acProgram.color + '30', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <MaterialCommunityIcons name={acProgram.icon as any} size={32} color={acProgram.color} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>{acProgram.name}</Text>
+                  <Text style={{ color: acProgram.color, fontSize: 10 }}>{acProgram.tagline}</Text>
+                </View>
+              </View>
+              <Text style={{ color: '#999', fontSize: 11 }}>{acProgram.desc}</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                <Text style={{ color: '#666', fontSize: 10 }}>{acProgram.category}</Text>
+                <Text style={{ color: acProgram.color, fontSize: 10, fontWeight: 'bold' }}>{acProgram.total_xp} XP | {acProgram.total_challenges} desafios</Text>
+              </View>
+            </View>
+
+            {acProgram.levels.map((l: any, i: number) => (
+              <TouchableOpacity key={l.id} onPress={() => openAcLevel(acProgram.id, l.id)}
+                style={{ backgroundColor: '#080810', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: acProgram.color + '20', flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: acProgram.color + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                  <Text style={{ color: acProgram.color, fontWeight: 'bold', fontSize: 14 }}>{i + 1}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>{l.name}</Text>
+                  <Text style={{ color: '#888', fontSize: 10 }}>{l.briefing?.substring(0, 60)}...</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <View style={{ backgroundColor: getDiffColor(l.difficulty), paddingHorizontal: 6, paddingVertical: 1, borderRadius: 3 }}>
+                    <Text style={{ color: '#000', fontSize: 8, fontWeight: 'bold' }}>{l.difficulty}</Text>
+                  </View>
+                  <Text style={{ color: acProgram.color, fontSize: 10, marginTop: 4 }}>{l.xp} XP</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {/* LEVEL VIEW - Challenges */}
+        {acView === 'level' && acLevel && (
+          <>
+            {/* Progress */}
+            <View style={{ backgroundColor: '#080810', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: (acProgram?.color || '#00ccff') + '30', marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{acLevel.name}</Text>
+                <Text style={{ color: '#ffcc00', fontSize: 12, fontWeight: 'bold' }}>{acScore} pts</Text>
+              </View>
+              <View style={{ height: 4, backgroundColor: '#1a1a1a', borderRadius: 2 }}>
+                <View style={{ height: 4, backgroundColor: acProgram?.color || '#00ccff', borderRadius: 2, width: `${((acChallengeIdx + (acResult?.correct ? 1 : 0)) / acLevel.challenges.length) * 100}%` }} />
+              </View>
+              <Text style={{ color: '#666', fontSize: 9, marginTop: 4 }}>Desafio {acChallengeIdx + 1} de {acLevel.challenges.length}</Text>
+            </View>
+
+            {/* Level complete */}
+            {acResult?.correct && acChallengeIdx === acLevel.challenges.length - 1 && (
+              <View style={{ backgroundColor: '#001a0d', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#3ddc84', marginBottom: 12, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="check-decagram" size={48} color="#3ddc84" />
+                <Text style={{ color: '#3ddc84', fontSize: 18, fontWeight: 'bold', marginTop: 6 }}>NIVEL COMPLETO</Text>
+                <Text style={{ color: '#ffcc00', fontSize: 16, marginTop: 4 }}>{acScore} / {acLevel.xp} XP</Text>
+                <TouchableOpacity onPress={() => { setAcView('program'); setAcLevel(null); }}
+                  style={{ marginTop: 12, backgroundColor: acProgram?.color || '#00ccff', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ color: '#000', fontWeight: 'bold' }}>VOLVER A NIVELES</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Current challenge */}
+            {!(acResult?.correct && acChallengeIdx === acLevel.challenges.length - 1) && (
+              <>
+                <View style={{ backgroundColor: (acProgram?.color || '#00ccff') + '10', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: (acProgram?.color || '#00ccff') + '30', marginBottom: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <View style={{ backgroundColor: acProgram?.color || '#00ccff', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: '#000', fontSize: 9, fontWeight: 'bold' }}>{acLevel.challenges[acChallengeIdx]?.type?.toUpperCase()}</Text>
+                    </View>
+                    <Text style={{ color: '#ffcc00', fontSize: 10, fontWeight: 'bold' }}>{acLevel.challenges[acChallengeIdx]?.points} pts</Text>
+                  </View>
+                  <View style={{ backgroundColor: '#000', borderRadius: 8, padding: 12 }}>
+                    <Text style={{ color: '#3ddc84', fontSize: 12, fontFamily: 'monospace' }}>{'>'} {acLevel.challenges[acChallengeIdx]?.prompt}</Text>
+                  </View>
+                </View>
+
+                {/* Answer input */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                  <TextInput
+                    style={{ flex: 1, backgroundColor: '#0a0a14', borderWidth: 1, borderColor: (acProgram?.color || '#00ccff') + '40', borderRadius: 8, padding: 10, color: '#fff', fontSize: 13, fontFamily: 'monospace' }}
+                    value={acAnswer} onChangeText={setAcAnswer}
+                    placeholder="Tu respuesta..." placeholderTextColor="#555"
+                    onSubmitEditing={submitAcAnswer}
+                  />
+                  <TouchableOpacity onPress={submitAcAnswer}
+                    style={{ backgroundColor: acProgram?.color || '#00ccff', borderRadius: 8, width: 44, justifyContent: 'center', alignItems: 'center' }}
+                    disabled={loading || !acAnswer.trim()}>
+                    {loading ? <ActivityIndicator color="#000" size="small" /> : <MaterialCommunityIcons name="send" size={20} color="#000" />}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Result */}
+                {acResult && (
+                  <View style={{ backgroundColor: acResult.correct ? '#001a0d' : '#1a0508', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: acResult.correct ? '#3ddc8440' : '#ff003c40', marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <MaterialCommunityIcons name={acResult.correct ? 'check-circle' : 'close-circle'} size={20} color={acResult.correct ? '#3ddc84' : '#ff003c'} />
+                      <Text style={{ color: acResult.correct ? '#3ddc84' : '#ff003c', fontSize: 13, fontWeight: 'bold' }}>{acResult.message}</Text>
+                    </View>
+                    {acResult.correct && acChallengeIdx < acLevel.challenges.length - 1 && (
+                      <TouchableOpacity onPress={nextAcChallenge}
+                        style={{ backgroundColor: acProgram?.color || '#00ccff', paddingVertical: 8, borderRadius: 6, alignItems: 'center', marginTop: 6 }}>
+                        <Text style={{ color: '#000', fontWeight: 'bold' }}>SIGUIENTE DESAFIO</Text>
+                      </TouchableOpacity>
+                    )}
+                    {!acResult.correct && acResult.hint && (
+                      <View style={{ backgroundColor: '#ffcc0010', borderRadius: 6, padding: 8, marginTop: 6 }}>
+                        <Text style={{ color: '#ffcc00', fontSize: 10 }}>Pista: {acResult.hint}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* AI Mentor */}
+                <View style={{ backgroundColor: '#080810', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#aa00ff30' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <MaterialCommunityIcons name="robot" size={16} color="#aa00ff" />
+                    <Text style={{ color: '#aa00ff', fontSize: 11, fontWeight: 'bold' }}>AI MENTOR</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <TextInput
+                      style={{ flex: 1, backgroundColor: '#0a0a14', borderWidth: 1, borderColor: '#aa00ff30', borderRadius: 6, padding: 8, color: '#fff', fontSize: 11 }}
+                      value={acMentorQ} onChangeText={setAcMentorQ}
+                      placeholder="Pregunta al mentor..." placeholderTextColor="#555"
+                      onSubmitEditing={askAcMentor}
+                    />
+                    <TouchableOpacity onPress={askAcMentor}
+                      style={{ backgroundColor: '#aa00ff', borderRadius: 6, width: 36, justifyContent: 'center', alignItems: 'center' }}
+                      disabled={loading || !acMentorQ.trim()}>
+                      <MaterialCommunityIcons name="brain" size={18} color="#000" />
+                    </TouchableOpacity>
+                  </View>
+                  {acMentorA ? (
+                    <View style={{ backgroundColor: '#aa00ff10', borderRadius: 6, padding: 8, marginTop: 8 }}>
+                      <Text style={{ color: '#cc66ff', fontSize: 10 }}>{acMentorA}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
@@ -1431,14 +1687,14 @@ export default function App() {
             </View>
             <ScrollView style={{ maxHeight: 420, padding: 8 }}>
               {TRAINING_PLATFORMS.map((p, i) => (
-                <TouchableOpacity key={i} onPress={() => { Linking.openURL(p.url); setShowPlatforms(false); }}
+                <TouchableOpacity key={i} onPress={() => { setShowPlatforms(false); setActiveTab('academy'); setTimeout(() => openAcProgram(p.url), 300); }}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 2, borderRadius: 8, backgroundColor: '#111' }}>
                   <Text style={{ fontSize: 22, width: 36, textAlign: 'center' }}>{p.emoji}</Text>
                   <View style={{ flex: 1, marginLeft: 8 }}>
                     <Text style={{ color: p.color, fontSize: 13, fontWeight: 'bold' }}>{p.name}</Text>
                     <Text style={{ color: '#888', fontSize: 10 }}>{p.desc}</Text>
                   </View>
-                  <MaterialCommunityIcons name="open-in-new" size={14} color="#555" />
+                  <MaterialCommunityIcons name="chevron-right" size={18} color="#555" />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -1662,6 +1918,24 @@ export default function App() {
           <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>4 Misiones</Text>
           <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>1550 Pts</Text>
           <Text style={[styles.eyeCardStat, { color: '#ff8833' }]}>Leaderboard</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* TRAINING ACADEMY MODULE */}
+      <TouchableOpacity style={[styles.cellCard, { borderColor: '#00ccff', backgroundColor: '#000d1a' }]} onPress={() => setActiveTab('academy')}>
+        <View style={styles.eyeCardContent}>
+          <View style={[styles.eyeIconSmall, { backgroundColor: '#001a2a' }]}>
+            <MaterialCommunityIcons name="school" size={36} color="#00ccff" />
+          </View>
+          <View style={styles.eyeCardText}>
+            <Text style={[styles.eyeCardTitle, { color: '#00ccff' }]}>ACADEMY</Text>
+            <Text style={[styles.eyeCardSubtitle, { color: '#0099cc' }]}>12 Programas Originales | AI Mentor | 75 Desafios</Text>
+          </View>
+        </View>
+        <View style={styles.eyeCardStats}>
+          <Text style={[styles.eyeCardStat, { color: '#33ddff' }]}>12 Programas</Text>
+          <Text style={[styles.eyeCardStat, { color: '#33ddff' }]}>2310 XP</Text>
+          <Text style={[styles.eyeCardStat, { color: '#33ddff' }]}>AI Powered</Text>
         </View>
       </TouchableOpacity>
 
@@ -3247,6 +3521,7 @@ export default function App() {
       {activeTab === 'cybertools' && renderCyberTools()}
       {activeTab === 'c2' && renderC2()}
       {activeTab === 'ctf' && renderCtf()}
+      {activeTab === 'academy' && renderAcademy()}
       {activeTab === 'osint' && renderSimpleTab('OSINT Scanner', '#00ff88', 'account-search', (
         <>
           <View style={styles.inputContainer}><MaterialCommunityIcons name="account-search" size={24} color="#00ff88" /><TextInput style={styles.input} placeholder="Username..." placeholderTextColor="#666" value={osintUsername} onChangeText={setOsintUsername} /></View>
