@@ -11,6 +11,8 @@ import {
   Dimensions,
   Platform,
   KeyboardAvoidingView,
+  Modal,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -275,6 +277,23 @@ export default function App() {
   const [ctfScore, setCtfScore] = useState(0);
   const [ctfComplete, setCtfComplete] = useState(false);
   const [ctfView, setCtfView] = useState<'list' | 'play' | 'leaderboard'>('list');
+
+  // Training Platforms modal
+  const [showPlatforms, setShowPlatforms] = useState(false);
+  const TRAINING_PLATFORMS = [
+    { emoji: '🧪', name: 'Hack The Box', desc: 'Hacking labs', url: 'https://www.hackthebox.com', color: '#9fef00' },
+    { emoji: '🌱', name: 'TryHackMe', desc: 'Beginner training', url: 'https://tryhackme.com', color: '#88cc14' },
+    { emoji: '🎮', name: 'OverTheWire', desc: 'Security wargames', url: 'https://overthewire.org/wargames/', color: '#00ccff' },
+    { emoji: '🧩', name: 'Root Me', desc: 'Hacking challenges', url: 'https://www.root-me.org', color: '#ffcc00' },
+    { emoji: '🏴', name: 'Hack This Site', desc: 'Classic practice', url: 'https://www.hackthissite.org', color: '#ff6600' },
+    { emoji: '🏁', name: 'picoCTF', desc: 'CTF training', url: 'https://picoctf.org', color: '#3ddc84' },
+    { emoji: '⚔️', name: 'PwnTillDawn', desc: 'Pentest labs', url: 'https://www.wizlynxgroup.com/news/2020/02/18/pwntilldawn/', color: '#ff003c' },
+    { emoji: '🐦', name: 'Parrot CTFs', desc: 'Security CTFs', url: 'https://parrotctfs.com', color: '#00bcd4' },
+    { emoji: '🌐', name: 'PentesterLab', desc: 'Web pentesting', url: 'https://pentesterlab.com', color: '#aa00ff' },
+    { emoji: '🏢', name: 'Immersive Labs', desc: 'Cyber training', url: 'https://www.immersivelabs.com', color: '#ff4081' },
+    { emoji: '🧨', name: 'Proving Grounds', desc: 'Pentest labs', url: 'https://www.offsec.com/labs/', color: '#ff5722' },
+    { emoji: '🛡️', name: 'RangeForce', desc: 'Blue team training', url: 'https://www.rangeforce.com', color: '#2196f3' },
+  ];
 
   useEffect(() => {
     if (activeTab === 'ctf') { loadCtfExercises(); loadCtfLeaderboard(); }
@@ -1389,10 +1408,47 @@ export default function App() {
   const renderHome = () => (
     <ScrollView style={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>X=pi</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <Text style={styles.logoText}>X=pi</Text>
+          <TouchableOpacity onPress={() => setShowPlatforms(true)} data-testid="pirate-flag-btn"
+            style={{ padding: 4 }}>
+            <Text style={{ fontSize: 32 }}>🏴‍☠️</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.subtitleText}>by Carbi</Text>
         <Text style={styles.taglineText}>Cybersecurity Toolkit v8.0</Text>
       </View>
+
+      {/* Training Platforms Modal */}
+      <Modal visible={showPlatforms} transparent animationType="fade" onRequestClose={() => setShowPlatforms(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 16 }}
+          activeOpacity={1} onPress={() => setShowPlatforms(false)}>
+          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: '#0a0a0a', borderRadius: 16, borderWidth: 1, borderColor: '#ff003c40', overflow: 'hidden' }}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#ff003c30', alignItems: 'center' }}>
+              <Text style={{ fontSize: 20 }}>🏴‍☠️</Text>
+              <Text style={{ color: '#ff003c', fontSize: 16, fontWeight: 'bold', marginTop: 4 }}>TRAINING PLATFORMS</Text>
+              <Text style={{ color: '#666', fontSize: 10 }}>Cybersecurity Learning Resources</Text>
+            </View>
+            <ScrollView style={{ maxHeight: 420, padding: 8 }}>
+              {TRAINING_PLATFORMS.map((p, i) => (
+                <TouchableOpacity key={i} onPress={() => { Linking.openURL(p.url); setShowPlatforms(false); }}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 10, marginBottom: 2, borderRadius: 8, backgroundColor: '#111' }}>
+                  <Text style={{ fontSize: 22, width: 36, textAlign: 'center' }}>{p.emoji}</Text>
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={{ color: p.color, fontSize: 13, fontWeight: 'bold' }}>{p.name}</Text>
+                    <Text style={{ color: '#888', fontSize: 10 }}>{p.desc}</Text>
+                  </View>
+                  <MaterialCommunityIcons name="open-in-new" size={14} color="#555" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity onPress={() => setShowPlatforms(false)}
+              style={{ padding: 12, borderTopWidth: 1, borderTopColor: '#ff003c20', alignItems: 'center' }}>
+              <Text style={{ color: '#ff003c', fontSize: 12, fontWeight: 'bold' }}>CERRAR</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.featuresGrid}>
         <TouchableOpacity style={styles.featureCard} onPress={() => setActiveTab('osint')}>
